@@ -1,0 +1,1635 @@
+<mvc:View
+    controllerName="aryasalesregister.controller.salesregister"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+    <Page
+        id="salesPage"
+        title="{i18n>title}"
+        showNavButton="false"
+    >
+        <content>
+            <Panel
+                id="salesFilterPanel"
+                headerText="Advanced Search and Filters"
+                expanded="true"
+                class="sapUiResponsiveMargin"
+            >
+                <content>
+                    <VBox
+                        id="salesFilterVBox"
+                        class="sapUiMediumMargin"
+                    >
+                        <HBox
+                            id="salesPrimaryFiltersHBox"
+                            alignItems="Center"
+                            class="sapUiSmallMarginBottom"
+                            wrap="Wrap"
+                        >
+                            <VBox
+                                id="salesBillingDocVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesBillingDocLabel"
+                                    text="Billing Document:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesBillingDocInput"
+                                    value="{filterData>/billingDocument}"
+                                    placeholder="e.g., 90000003"
+                                    width="150px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesMaterialVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesMaterialLabel"
+                                    text="Material/Product:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesMaterialInput"
+                                    value="{filterData>/material}"
+                                    placeholder="Material or Product"
+                                    width="150px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesRegionVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesRegionLabel"
+                                    text="Customer State:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesRegionInput"
+                                    value="{filterData>/region}"
+                                    placeholder="Region code"
+                                    width="100px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesDocTypeVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesDocTypeLabel"
+                                    text="Document Type:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesDocTypeInput"
+                                    value="{filterData>/billingDocumentType}"
+                                    placeholder="Doc type"
+                                    width="100px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesPaymentTermsVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesPaymentTermsLabel"
+                                    text="Terms of Payment:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesPaymentTermsInput"
+                                    value="{filterData>/paymentTerms}"
+                                    placeholder="Payment Terms"
+                                    width="100px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesSalesOrderVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesSalesOrderLabel"
+                                    text="Sales Order:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesSalesOrderInput"
+                                    value="{filterData>/salesOrder}"
+                                    placeholder="Sales Order No."
+                                    width="120px"
+                                />
+                            </VBox>
+                        </HBox>
+
+                        <HBox
+                            id="salesAmountCurrencyHBox"
+                            alignItems="Center"
+                            class="sapUiSmallMarginBottom"
+                            wrap="Wrap"
+                        >
+                            <VBox
+                                id="salesAmountFromVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesAmountFromLabel"
+                                    text="Amount From:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesAmountFromInput"
+                                    value="{filterData>/amountRange/from}"
+                                    placeholder="Min amount"
+                                    width="120px"
+                                    type="Number"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesAmountToVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesAmountToLabel"
+                                    text="Amount To:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesAmountToInput"
+                                    value="{filterData>/amountRange/to}"
+                                    placeholder="Max amount"
+                                    width="120px"
+                                    type="Number"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesCurrencyVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesCurrencyLabel"
+                                    text="Transaction Currency:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <Input
+                                    id="salesCurrencyInput"
+                                    value="{filterData>/transactionCurrency}"
+                                    placeholder="e.g., INR"
+                                    width="100px"
+                                />
+                            </VBox>
+
+                            <VBox
+                                id="salesPeriodVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesPeriodLabel"
+                                    text="Period Selection:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <ComboBox
+                                    id="salesPeriodComboBox"
+                                    selectedKey="{filterData>/selectedPeriod}"
+                                    items="{filterData>/availablePeriods}"
+                                    selectionChange="onPeriodSelectionChange"
+                                    width="150px"
+                                >
+                                    <core:Item
+                                        id="salesPeriodItem"
+                                        key="{filterData>key}"
+                                        text="{filterData>text}"
+                                    />
+                                </ComboBox>
+                            </VBox>
+
+                            <!-- Date Range Filters -->
+                            <VBox
+                                id="salesDateRangeVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesDateRangeLabel"
+                                    text="Date Range:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <HBox
+                                    id="salesDateRangeHBox"
+                                    alignItems="Center"
+                                    wrap="Wrap"
+                                >
+                                    <DatePicker
+                                        id="salesDateFromPicker"
+                                        value="{filterData>/dateRange/from}"
+                                        placeholder="From Date"
+                                        width="120px"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <DatePicker
+                                        id="salesDateToPicker"
+                                        value="{filterData>/dateRange/to}"
+                                        placeholder="To Date"
+                                        width="120px"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesQuickDateButton"
+                                        text="Quick Dates"
+                                        icon="sap-icon://calendar"
+                                        press="onShowQuickDateOptions"
+                                        type="Transparent"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                </HBox>
+                            </VBox>
+
+                            <!-- Quick Date Presets -->
+                            <VBox
+                                id="salesQuickDatePresetsVBox"
+                                class="sapUiMediumMarginEnd"
+                                visible="{= ${filterData>/showQuickDatePresets}}"
+                            >
+                                <Label
+                                    id="salesQuickDatePresetsLabel"
+                                    text="Quick Presets:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <HBox
+                                    id="salesQuickDatePresetsHBox"
+                                    alignItems="Center"
+                                    wrap="Wrap"
+                                >
+                                    <Button
+                                        id="salesTodayButton"
+                                        text="Today"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesYesterdayButton"
+                                        text="Yesterday"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesThisWeekButton"
+                                        text="This Week"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesLastWeekButton"
+                                        text="Last Week"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesThisMonthButton"
+                                        text="This Month"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesLastMonthButton"
+                                        text="Last Month"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesThisYearButton"
+                                        text="This Year"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="salesLastYearButton"
+                                        text="Last Year"
+                                        press="onQuickDateSelect"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                </HBox>
+                            </VBox>
+                        </HBox>
+
+                        <HBox
+                            id="salesOptionsHBox"
+                            alignItems="Center"
+                            class="sapUiSmallMarginBottom"
+                            wrap="Wrap"
+                        >
+                            <VBox
+                                id="salesRecordsPerLoadVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesRecordsPerLoadLabel"
+                                    text="Records per Load:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <ComboBox
+                                    id="salesPagingTopComboBox"
+                                    selectedKey="{filterData>/pagingTop}"
+                                    width="120px"
+                                >
+                                    <items>
+                                        <core:Item
+                                            id="salesPaging25Item"
+                                            key="25"
+                                            text="25"
+                                        />
+                                        <core:Item
+                                            id="salesPaging50Item"
+                                            key="50"
+                                            text="50"
+                                        />
+                                        <core:Item
+                                            id="salesPaging100Item"
+                                            key="100"
+                                            text="100"
+                                        />
+                                        <core:Item
+                                            id="salesPaging200Item"
+                                            key="200"
+                                            text="200"
+                                        />
+                                        <core:Item
+                                            id="salesPaging500Item"
+                                            key="500"
+                                            text="500"
+                                        />
+                                    </items>
+                                </ComboBox>
+                            </VBox>
+
+                            <VBox
+                                id="salesGroupingVBox"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="salesGroupingOptionsLabel"
+                                    text="Grouping Options:"
+                                    class="sapUiSmallMarginBottom"
+                                />
+                                <RadioButtonGroup
+                                    id="salesGroupingRadioGroup"
+                                    columns="1"
+                                    selectedIndex="{= ${filterData>/groupBySalesOrder} ? 0 : (${filterData>/groupByDocument} ? 1 : 2)}"
+                                    select="onGroupingOptionChange"
+                                >
+                                    <RadioButton
+                                        id="salesGroupBySalesOrderRadio"
+                                        text="Group by Sales Order (with Text)"
+                                    />
+                                    <RadioButton
+                                        id="salesGroupByBillingDocRadio"
+                                        text="Group by Billing Document"
+                                    />
+                                    <RadioButton
+                                        id="salesNoGroupingRadio"
+                                        text="No Grouping"
+                                    />
+                                </RadioButtonGroup>
+                            </VBox>
+                        </HBox>
+
+                        <HBox
+                            id="salesActionsHBox"
+                            alignItems="Center"
+                            class="sapUiMediumMarginTop"
+                            wrap="Wrap"
+                        >
+                            <Button
+                                id="salesLoadDataButton"
+                                text="Load All Data"
+                                type="Emphasized"
+                                press="onLoadData"
+                                enabled="{= !${loadingState>/loading}}"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesClearFiltersButton"
+                                text="Clear Filters"
+                                press="onClearFilters"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesClearDateFiltersButton"
+                                text="Clear Date Filters"
+                                press="onClearDateFilters"
+                                visible="{= ${filterData>/dateRange/from} !== null || ${filterData>/dateRange/to} !== null}"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesRefreshButton"
+                                text="Refresh"
+                                icon="sap-icon://refresh"
+                                press="onLoadData"
+                                enabled="{= !${loadingState>/loading}}"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesExactSearchButton"
+                                text="Exact Search"
+                                icon="sap-icon://search"
+                                press="onSearchExactBillingDocument"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesTestConnectionButton"
+                                text="Test Main Service"
+                                icon="sap-icon://inspect"
+                                press="onTestConnection"
+                                class="sapUiSmallMarginEnd"
+                            />
+
+                            <Button
+                                id="salesTestSOAPIButton"
+                                text="Test SO API"
+                                icon="sap-icon://puzzle"
+                                press="onTestSalesOrderConnection"
+                                class="sapUiSmallMarginEnd"
+                            />
+                        </HBox>
+
+                        <VBox
+                            id="salesStatusVBox"
+                            class="sapUiMediumMarginTop"
+                        >
+                            <Text
+                                id="salesRecordsCountText"
+                                text="Total Records: {salesData>/count} | Loaded: {pagination>/loadedRecords} of {pagination>/totalRecords}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <!-- Date Filter Status -->
+                            <Text
+                                id="salesDateFilterStatusText"
+                                text="{= ${filterData>/dateRange/from} !== null &amp;&amp; ${filterData>/dateRange/to} !== null ? '📅 Date Filter: ' + ${filterData>/dateRange/from, formatter: '.formatDateForDisplay'} + ' to ' + ${filterData>/dateRange/to, formatter: '.formatDateForDisplay'} : ''}"
+                                visible="{= ${filterData>/dateRange/from} !== null &amp;&amp; ${filterData>/dateRange/to} !== null}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <ProgressIndicator
+                                id="salesProgressIndicator"
+                                percentValue="{loadingState>/progress}"
+                                displayValue="{loadingState>/currentOperation}"
+                                visible="{loadingState>/loading}"
+                                class="sapUiSmallMarginTop"
+                            />
+                        </VBox>
+                        <VBox
+                            id="_IDGenVBox24"
+                            class="sapUiMediumMarginTop"
+                        >
+                            <!-- Existing status content -->
+                            <Text
+                                id="_IDGenText14"
+                                text="Total Records: {salesData>/count} | Loaded: {pagination>/loadedRecords} of {pagination>/totalRecords}"
+                                class="sapUiSmallMarginBottom"
+                            />
+
+                            <!-- ✅ NEW: Add grouping status -->
+                            <HBox
+                                id="_IDGenHBox"
+                                alignItems="Center"
+                                class="sapUiTinyMarginTop"
+                            >
+                                <Label
+                                    id="_IDGenLabel22"
+                                    text="Display Mode:"
+                                    class="sapUiTinyMarginEnd"
+                                />
+
+                                <CheckBox
+                                    id="enableGroupingCheckbox"
+                                    text="Enable Grouping"
+                                    selected="{filterData>/enableGrouping}"
+                                    select="onGroupingToggle"
+                                    class="sapUiTinyMarginEnd"
+                                />
+
+                                <Select
+                                    id="groupingMethodSelect"
+                                    selectedKey="{filterData>/groupingMethod}"
+                                    enabled="{filterData>/enableGrouping}"
+                                    change="onGroupingMethodChange"
+                                    width="160px"
+                                    class="sapUiTinyMarginEnd"
+                                >
+                                    <core:Item
+                                        id="_IDGenItem1"
+                                        key="none"
+                                        text="Individual Records"
+                                    />
+                                    <core:Item
+                                        id="_IDGenItem2"
+                                        key="salesOrder"
+                                        text="Group by Sales Order"
+                                    />
+                                    <core:Item
+                                        id="_IDGenItem3"
+                                        key="billingDoc"
+                                        text="Group by Billing Document"
+                                    />
+                                </Select>
+
+                                <Text
+                                    id="_IDGenText"
+                                    text="{= ${filterData>/enableGrouping} ? '📊 Grouped View' : '📋 Individual Records'}"
+                                    class="sapUiTinyMarginStart"
+                                />
+                            </HBox>
+
+                            <!-- Current strategy display -->
+                            <Text
+                                id="_IDGenText13"
+                                text="📈 Strategy: Showing {salesData>/count} records from {salesData>/totalCount} total"
+                                class="sapUiTinyMarginTop"
+                            />
+
+                            <!-- Existing progress indicator -->
+                            <ProgressIndicator
+                                id="_IDGenProgressIndicator"
+                                percentValue="{loadingState>/progress}"
+                                displayValue="{loadingState>/currentOperation}"
+                                visible="{loadingState>/loading}"
+                                class="sapUiSmallMarginTop"
+                            />
+                        </VBox>
+                    </VBox>
+                </content>
+            </Panel>
+
+            <Panel
+                id="salesDataTablePanel"
+                headerText="Enhanced Sales Register Data with Condition Types and Sales Order Text"
+                class="sapUiResponsiveMargin"
+            >
+                <headerToolbar>
+                    <Toolbar id="salesTableToolbar">
+                        <Title
+                            id="salesTableTitle"
+                            text="Sales Records ({salesData>/count})"
+                        />
+                        <ToolbarSpacer id="salesToolbarSpacer" />
+
+                        <MenuButton
+                            id="salesActionsMenuButton"
+                            text="Actions"
+                            icon="sap-icon://action"
+                        >
+                            <menu>
+                                <Menu id="salesActionsMenu">
+                                    <items>
+                                        <MenuItem
+                                            id="salesExportAllMenuItem"
+                                            text="Export to Excel"
+                                            icon="sap-icon://excel-attachment"
+                                            press="onExportToExcel"
+                                        />
+                                        <MenuItem
+                                            id="salesExportEnhancedMenuItem"
+                                            text="Export Enhanced (with SO Text)"
+                                            icon="sap-icon://excel-attachment"
+                                            press="onExportToExcelEnhanced"
+                                        />
+                                        <MenuItem
+                                            id="salesExportComprehensiveMenuItem"
+                                            text="Export Comprehensive Invoice Format"
+                                            icon="sap-icon://document-text"
+                                            press="onExportToExcelComprehensive"
+                                        />
+                                        <MenuItem
+                                            id="salesExportCurrentMenuItem"
+                                            text="Export Current View"
+                                            icon="sap-icon://download"
+                                            press="onExportToExcelCurrent"
+                                        />
+                                        <MenuItem
+                                            id="salesShowSummaryMenuItem"
+                                            text="Show Summary"
+                                            icon="sap-icon://pie-chart"
+                                            press="onShowSummary"
+                                        />
+                                        <MenuItem
+                                            id="salesEnhancedSummaryMenuItem"
+                                            text="Enhanced Summary"
+                                            icon="sap-icon://business-objects-experience"
+                                            press="onShowEnhancedSummary"
+                                        />
+                                        <MenuItem
+                                            id="salesConditionSummaryMenuItem"
+                                            text="Condition Type Summary"
+                                            icon="sap-icon://detail-view"
+                                            press="onShowConditionTypeSummary"
+                                        />
+                                        <MenuItem
+                                            id="salesTestSOAPIMenuItem"
+                                            text="Test Sales Order API"
+                                            icon="sap-icon://puzzle"
+                                            press="onTestSalesOrderConnection"
+                                        />
+                                        <MenuItem
+                                            id="salesTestAllAPIsMenuItem"
+                                            text="Test All Connections"
+                                            icon="sap-icon://connected"
+                                            press="onTestAllConnections"
+                                        />
+                                    </items>
+                                </Menu>
+                            </menu>
+                        </MenuButton>
+
+                        <MenuButton
+                            id="salesSortMenuButton"
+                            text="Sort"
+                            icon="sap-icon://sort"
+                        >
+                            <menu>
+                                <Menu id="salesSortMenu">
+                                    <items>
+                                        <MenuItem
+                                            id="salesSortDocAscMenuItem"
+                                            text="Document (Ascending)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="BillingDocument"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="false"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortDocDescMenuItem"
+                                            text="Document (Descending)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="BillingDocument"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="true"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortSOAscMenuItem"
+                                            text="Sales Order (Ascending)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="PrimarySalesOrder"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="false"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortAmountHighestMenuItem"
+                                            text="Amount (Highest)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="TotalNetAmount"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="true"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortAmountLowestMenuItem"
+                                            text="Amount (Lowest)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="TotalNetAmount"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="false"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortMaterialMenuItem"
+                                            text="Material"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="Material"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="false"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesSortDateMenuItem"
+                                            text="Date (Newest)"
+                                            press="onQuickSort"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="property"
+                                                    value="BillingDocumentDate"
+                                                />
+                                                <core:CustomData
+                                                    key="descending"
+                                                    value="true"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                    </items>
+                                </Menu>
+                            </menu>
+                        </MenuButton>
+
+                        <MenuButton
+                            id="salesColumnsMenuButton"
+                            text="Columns"
+                            icon="sap-icon://table-column"
+                        >
+                            <menu>
+                                <Menu id="salesColumnsMenu">
+                                    <items>
+                                        <MenuItem
+                                            id="salesToggleSOTextMenuItem"
+                                            text="Toggle SO Text Column"
+                                            icon="sap-icon://accept"
+                                            press="onToggleColumn"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="columnId"
+                                                    value="salesColSalesOrderText"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesTogglePPR0MenuItem"
+                                            text="Toggle PPR0 Column"
+                                            icon="sap-icon://accept"
+                                            press="onToggleColumn"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="columnId"
+                                                    value="salesColPPR0"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesToggleDRV1MenuItem"
+                                            text="Toggle DRV1 Column"
+                                            icon="sap-icon://accept"
+                                            press="onToggleColumn"
+                                        >
+                                            <customData>
+                                                <core:CustomData
+                                                    key="columnId"
+                                                    value="salesColDRV1"
+                                                />
+                                            </customData>
+                                        </MenuItem>
+                                        <MenuItem
+                                            id="salesToggleJTCMenuItem"
+                                            text="Toggle JTC Columns"
+                                            icon="sap-icon://accept"
+                                            press="onToggleJTCColumns"
+                                        />
+                                        <MenuItem
+                                            id="salesToggleAllConditionsMenuItem"
+                                            text="Show All Condition Types"
+                                            icon="sap-icon://show"
+                                            press="onShowAllConditionColumns"
+                                        />
+                                        <MenuItem
+                                            id="salesHideAllConditionsMenuItem"
+                                            text="Hide All Condition Types"
+                                            icon="sap-icon://hide"
+                                            press="onHideAllConditionColumns"
+                                        />
+                                    </items>
+                                </Menu>
+                            </menu>
+                        </MenuButton>
+                    </Toolbar>
+                </headerToolbar>
+
+                <content>
+                    <SearchField
+                        id="salesTableSearchField"
+                        width="300px"
+                        placeholder="Search in table..."
+                        search="onTableSearch"
+                        class="sapUiMediumMargin"
+                    />
+
+                    <ScrollContainer
+                        id="salesTableScrollContainer"
+                        horizontal="true"
+                        vertical="true"
+                        height="600px"
+                    >
+                        <Table
+                            id="salesTable"
+                            items="{salesData>/results}"
+                            growingThreshold="20"
+                            growingScrollToLoad="true"
+                            growing="true"
+                            class="sapUiResponsiveMargin salesTableScrollable"
+                        >
+                            <headerToolbar>
+                                <Toolbar id="salesTableHeaderToolbar">
+                                    <Title
+                                        id="salesTableHeaderTitle"
+                                        text="Records: {salesData>/count}"
+                                        level="H3"
+                                    />
+                                    <ToolbarSpacer
+                                        id="salesTableHeaderSpacer"
+                                    />
+                                    <!-- Scroll Info Message -->
+                                    <Text
+                                        id="salesScrollInfoText"
+                                        text="💡 Scroll down to automatically load more records"
+                                        visible="{= ${pagination>/hasMore}}"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <!-- Loading Indicator for Growing -->
+                                    <HBox
+                                        id="salesGrowingLoadingBox"
+                                        visible="{= ${pagination>/hasMore} &amp;&amp; ${loadingState>/loading}}"
+                                        alignItems="Center"
+                                        class="sapUiTinyMarginEnd"
+                                    >
+                                        <Text
+                                            id="salesGrowingLoadingText"
+                                            text="Loading more records..."
+                                            class="sapUiTinyMarginEnd"
+                                        />
+                                        <BusyIndicator
+                                            id="salesGrowingLoadingBusyIndicator"
+                                            size="1rem"
+                                        />
+                                    </HBox>
+                                    <!-- Pagination Status -->
+                                    <VBox
+                                        id="salesPaginationStatusVBox"
+                                        class="sapUiTinyMarginEnd"
+                                        visible="{= ${pagination>/hasMore} || ${pagination>/currentPage} > 1}"
+                                    >
+                                        <Text
+                                            id="salesPaginationStatusText"
+                                            text="Page {pagination>/currentPage} of {pagination>/totalPages} | {pagination>/loadedRecords} of {pagination>/totalRecords} records"
+                                            class="sapUiTinyMarginBottom"
+                                        />
+                                        <Text
+                                            id="salesPaginationPageSizeText"
+                                            text="Page Size: {pagination>/pageSize} | {= ${pagination>/hasMore} ? 'More data available' : 'All data loaded'}"
+                                            class="sapUiTinyMarginTop"
+                                        />
+                                    </VBox>
+                                </Toolbar>
+                            </headerToolbar>
+
+                            <columns>
+                                <!-- Sales Order and Item Columns -->
+                                <Column
+                                    id="salesColSalesOrder"
+                                    width="12rem"
+                                >
+                                    <Text
+                                        id="salesSalesOrderText"
+                                        text="Sales Order No."
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColSalesOrderItem"
+                                    width="8rem"
+                                >
+                                    <Text
+                                        id="salesSalesOrderItemText"
+                                        text="SO Item"
+                                    />
+                                </Column>
+
+                                <!-- Sales Order Text Column -->
+                                <Column
+                                    id="salesColSalesOrderText"
+                                    width="18rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesSalesOrderTextHeader"
+                                        text="Item Description"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColBillingDoc"
+                                    width="12rem"
+                                >
+                                    <Text
+                                        id="salesBillingDocText"
+                                        text="Billing Document"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColBillingDate"
+                                    width="10rem"
+                                >
+                                    <Text
+                                        id="salesBillingDateText"
+                                        text="Billing Date"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColDocType"
+                                    width="8rem"
+                                >
+                                    <Text
+                                        id="salesDocTypeText"
+                                        text="Doc Type"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColMaterial"
+                                    width="15rem"
+                                >
+                                    <Text
+                                        id="salesMaterialText"
+                                        text="Material/Product"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColQuantity"
+                                    width="10rem"
+                                >
+                                    <Text
+                                        id="salesQuantityText"
+                                        text="Quantity"
+                                    />
+                                </Column>
+
+                                <!-- Financial Columns -->
+                                <Column
+                                    id="salesColNetAmount"
+                                    width="12rem"
+                                >
+                                    <Text
+                                        id="salesNetAmountText"
+                                        text="Net Amount"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColDiscount"
+                                    width="10rem"
+                                >
+                                    <Text
+                                        id="salesDiscountText"
+                                        text="Discount"
+                                    />
+                                </Column>
+
+                                <!-- Invoice Amount Column -->
+                                <Column
+                                    id="salesColInvoiceAmount"
+                                    width="120px"
+                                    hAlign="End"
+                                >
+                                    <header>
+                                        <Label
+                                            id="salesInvoiceAmountHeader"
+                                            text="Invoice Amount"
+                                            design="Bold"
+                                        />
+                                    </header>
+                                </Column>
+
+                                <!-- Key Condition Type Columns - Now Visible -->
+                                <Column
+                                    id="salesColPPR0"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesPPR0Text"
+                                        text="Rate/MT"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColJOIG"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesJOIGText"
+                                        text="IGST"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColJOCG"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesJOCGText"
+                                        text="CGST"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColJOSG"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesJOSGText"
+                                        text="SGST"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColZDV2"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesZDV2Text"
+                                        text="Add. Charges"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColZDV4"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesZDV4Text"
+                                        text="Delay Charges"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColZTCS"
+                                    width="8rem"
+                                    visible="true"
+                                >
+                                    <Text
+                                        id="salesZTCSText"
+                                        text="TCS"
+                                    />
+                                </Column>
+
+                                <!-- Other Important Columns -->
+                                <Column
+                                    id="salesColCustomer"
+                                    width="12rem"
+                                >
+                                    <Text
+                                        id="salesCustomerText"
+                                        text="Customer"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColRegion"
+                                    width="8rem"
+                                >
+                                    <Text
+                                        id="salesRegionText"
+                                        text="Customer State"
+                                    />
+                                </Column>
+
+                                <Column
+                                    id="salesColActions"
+                                    width="10rem"
+                                >
+                                    <Text
+                                        id="salesActionsText"
+                                        text="Actions"
+                                    />
+                                </Column>
+                            </columns>
+
+                            <items>
+                                <ColumnListItem
+                                    id="salesColumnListItem"
+                                    press="onViewRowDetails"
+                                >
+                                    <cells>
+                                        <!-- Enhanced Sales Order Cell -->
+                                        <VBox
+                                            id="salesSalesOrderCellBox"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <Text
+                                                id="salesSalesOrderCell"
+                                                text="{salesData>SalesDocument}"
+                                                class="sapUiTinyMarginBottom"
+                                            />
+                                        </VBox>
+
+                                        <!-- Sales Order Item Cell -->
+                                        <Text
+                                            id="salesSalesOrderItemCell"
+                                            text="{= ${salesData>SalesDocumentItem} ? parseInt(${salesData>SalesDocumentItem}) : ''}"
+                                            class="sapUiTinyMargin"
+                                        />
+
+                                        <!-- Sales Order Text Cell -->
+                                        <VBox
+                                            id="salesSalesOrderTextCell"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <Text
+                                                id="salesSalesOrderTextMain"
+                                                text="{= ${salesData>ZXT6} || ${salesData>SalesOrderText} || ${salesData>BillingDocumentItemText} || ${salesData>PrimarySalesOrder}}"
+                                                wrapping="true"
+                                                maxLines="2"
+                                                class="sapUiTinyMarginBottom"
+                                            />
+                                            <HBox
+                                                id="salesSalesOrderTextDetails"
+                                                alignItems="Center"
+                                                class="sapUiTinyMarginTop"
+                                            >
+                                                <Text
+                                                    id="salesSalesOrderTextWarehouse"
+                                                    text="{= ${salesData>ZXT1} ? 'WH: ' + ${salesData>ZXT1} : ''}"
+                                                    visible="{= ${salesData>ZXT1} !== null &amp;&amp; ${salesData>ZXT1} !== undefined}"
+                                                    class="sapUiTinyMarginEnd"
+                                                />
+                                                <Text
+                                                    id="salesSalesOrderTextContract"
+                                                    text="{= ${salesData>ZXT4} ? 'Contract: ' + ${salesData>ZXT4} : ''}"
+                                                    visible="{= ${salesData>ZXT4} !== null &amp;&amp; ${salesData>ZXT4} !== undefined}"
+                                                    class="sapUiTinyMarginEnd"
+                                                />
+                                                <Text
+                                                    id="salesSalesOrderTextLocation"
+                                                    text="{= ${salesData>ZXT3} ? 'Location: ' + ${salesData>ZXT3} : ''}"
+                                                    visible="{= ${salesData>ZXT3} !== null &amp;&amp; ${salesData>ZXT3} !== undefined}"
+                                                />
+                                            </HBox>
+                                            <Text
+                                                id="salesSalesOrderTextDate"
+                                                text="{= ${salesData>ZXT5} ? 'Period: ' + ${salesData>ZXT5} : ''}"
+                                                visible="{= ${salesData>ZXT5} !== null &amp;&amp; ${salesData>ZXT5} !== undefined}"
+                                                class="sapUiTinyMarginTop"
+                                            />
+                                        </VBox>
+
+                                        <Text
+                                            id="salesBillingDocCell"
+                                            text="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>BillingDocumentsCombined} : ${salesData>BillingDocument}}"
+                                            wrapping="true"
+                                        />
+
+                                        <Text
+                                            id="salesBillingDateCell"
+                                            text="{parts: ['salesData>DateRange', 'salesData>BillingDocumentDate'], formatter: '.formatDateRange'}"
+                                            wrapping="true"
+                                        />
+
+                                        <Text
+                                            id="salesDocTypeCell"
+                                            text="{salesData>BillingDocumentType}"
+                                        />
+
+                                        <Text
+                                            id="salesMaterialCell"
+                                            text="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>MaterialCombined} : ${salesData>MaterialDisplay}}"
+                                            wrapping="true"
+                                        />
+
+                                        <Text
+                                            id="salesQuantityCell"
+                                            text="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>TotalQuantitySum} + ' ' + ${salesData>BillingQuantityUnit} : ${salesData>QuantityFormatted}}"
+                                        />
+
+                                        <!-- Financial Data -->
+                                        <ObjectNumber
+                                            id="salesNetAmountCell"
+                                            number="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>TotalNetAmountSum} : ${salesData>TotalNetAmount}}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{= (${salesData>TotalNetAmountSum} || ${salesData>TotalNetAmount}) > 100000 ? 'Success' : 'None'}"
+                                        />
+
+                                        <ObjectNumber
+                                            id="salesDiscountCell"
+                                            number="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>DiscountSum} : ${salesData>Discount}}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{= (${salesData>DiscountSum} || ${salesData>Discount}) > 0 ? 'Warning' : 'None'}"
+                                        />
+
+                                        <!-- Invoice Amount Cell -->
+                                        <ObjectNumber
+                                            id="salesInvoiceAmountCell"
+                                            number="{salesData>InvoiceAmount}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{= parseFloat(${salesData>InvoiceAmount} || 0) > 100000 ? 'Success' : 'None'}"
+                                            class="sapUiTinyMarginEnd"
+                                        />
+
+                                        <!-- FIXED: PPR0 Cell - Shows aggregated value -->
+                                        <VBox
+                                            id="salesPPR0CellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesPPR0Cell"
+                                                number="{salesData>PPR0}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>PPR0} &amp;&amp; ${salesData>PPR0} !== '0.00' &amp;&amp; ${salesData>PPR0} !== '0'}"
+                                                state="{= parseFloat(${salesData>PPR0} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesPPR0EmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>PPR0} || ${salesData>PPR0} === '0.00' || ${salesData>PPR0} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: JOIG Cell - Shows aggregated IGST -->
+                                        <VBox
+                                            id="salesJOIGCellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesJOIGCell"
+                                                number="{salesData>JOIG}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>JOIG} &amp;&amp; ${salesData>JOIG} !== '0.00' &amp;&amp; ${salesData>JOIG} !== '0'}"
+                                                state="{= parseFloat(${salesData>JOIG} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesJOIGEmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>JOIG} || ${salesData>JOIG} === '0.00' || ${salesData>JOIG} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: JOCG Cell - Shows aggregated CGST -->
+                                        <VBox
+                                            id="salesJOCGCellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesJOCGCell"
+                                                number="{salesData>JOCG}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>JOCG} &amp;&amp; ${salesData>JOCG} !== '0.00' &amp;&amp; ${salesData>JOCG} !== '0'}"
+                                                state="{= parseFloat(${salesData>JOCG} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesJOCGEmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>JOCG} || ${salesData>JOCG} === '0.00' || ${salesData>JOCG} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: JOSG Cell - Shows aggregated SGST -->
+                                        <VBox
+                                            id="salesJOSGCellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesJOSGCell"
+                                                number="{salesData>JOSG}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>JOSG} &amp;&amp; ${salesData>JOSG} !== '0.00' &amp;&amp; ${salesData>JOSG} !== '0'}"
+                                                state="{= parseFloat(${salesData>JOSG} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesJOSGEmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>JOSG} || ${salesData>JOSG} === '0.00' || ${salesData>JOSG} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: ZDV2 Cell - Shows aggregated additional charges -->
+                                        <VBox
+                                            id="salesZDV2CellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesZDV2Cell"
+                                                number="{salesData>ZDV2}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>ZDV2} &amp;&amp; ${salesData>ZDV2} !== '0.00' &amp;&amp; ${salesData>ZDV2} !== '0'}"
+                                                state="{= parseFloat(${salesData>ZDV2} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesZDV2EmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>ZDV2} || ${salesData>ZDV2} === '0.00' || ${salesData>ZDV2} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: ZDV4 Cell - Shows aggregated delay charges -->
+                                        <VBox
+                                            id="salesZDV4CellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesZDV4Cell"
+                                                number="{salesData>ZDV4}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>ZDV4} &amp;&amp; ${salesData>ZDV4} !== '0.00' &amp;&amp; ${salesData>ZDV4} !== '0'}"
+                                                state="{= parseFloat(${salesData>ZDV4} || 0) > 0 ? 'Warning' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesZDV4EmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>ZDV4} || ${salesData>ZDV4} === '0.00' || ${salesData>ZDV4} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- FIXED: ZTCS Cell - Shows aggregated TCS -->
+                                        <VBox
+                                            id="salesZTCSCellContainer"
+                                            class="sapUiTinyMargin"
+                                        >
+                                            <ObjectNumber
+                                                id="salesZTCSCell"
+                                                number="{salesData>ZTCS}"
+                                                unit="{salesData>TransactionCurrency}"
+                                                visible="{= ${salesData>ZTCS} &amp;&amp; ${salesData>ZTCS} !== '0.00' &amp;&amp; ${salesData>ZTCS} !== '0'}"
+                                                state="{= parseFloat(${salesData>ZTCS} || 0) > 0 ? 'Success' : 'None'}"
+                                            />
+                                            <Text
+                                                id="salesZTCSEmptyText"
+                                                text="-"
+                                                visible="{= !${salesData>ZTCS} || ${salesData>ZTCS} === '0.00' || ${salesData>ZTCS} === '0'}"
+                                                class="sapUiTinyMargin"
+                                            />
+                                        </VBox>
+
+                                        <!-- Other Information -->
+                                        <Text
+                                            id="salesCustomerCell"
+                                            text="{salesData>CustomerDisplay}"
+                                            wrapping="true"
+                                        />
+
+                                        <Text
+                                            id="salesRegionCell"
+                                            text="{= ${salesData>GroupingType} === 'SALES_ORDER' ? ${salesData>RegionsCombined} : ${salesData>Region}}"
+                                            wrapping="true"
+                                        />
+
+                                        <!-- FIXED: Enhanced Actions Cell - Always visible Details button -->
+                                        <HBox
+                                            id="salesActionsCellBox"
+                                            alignItems="Center"
+                                            justifyContent="SpaceAround"
+                                        >
+                                            <Button
+                                                id="salesDetailsButton"
+                                                text="Details"
+                                                icon="sap-icon://display"
+                                                press="onViewRowDetails"
+                                                type="Transparent"
+                                                class="sapUiTinyMarginEnd"
+                                            />
+                                        </HBox>
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+
+                            <noData>
+                                <IllustratedMessage
+                                    id="salesNoDataIllustratedMessage"
+                                    illustrationType="sapIllus-EmptyList"
+                                    title="No Sales Data"
+                                    description="No sales records found. Try adjusting your search criteria or load data with different filters."
+                                >
+                                    <additionalContent>
+                                        <Button
+                                            id="salesTestConnectionNoDataButton"
+                                            text="Test Main Service"
+                                            press="onTestConnection"
+                                            type="Emphasized"
+                                            class="sapUiSmallMarginEnd"
+                                        />
+                                        <Button
+                                            id="salesTestSOAPINoDataButton"
+                                            text="Test SO API"
+                                            press="onTestSalesOrderConnection"
+                                            type="Ghost"
+                                        />
+                                    </additionalContent>
+                                </IllustratedMessage>
+                            </noData>
+                        </Table>
+                    </ScrollContainer>
+                </content>
+            </Panel>
+
+            <Panel
+                id="salesStatisticsPanel"
+                headerText="Statistics and Information"
+                class="sapUiResponsiveMargin"
+            >
+                <content>
+                    <HBox
+                        id="salesStatisticsHBox"
+                        class="sapUiMediumMargin"
+                        wrap="Wrap"
+                    >
+                        <VBox
+                            id="salesRecordsVBox"
+                            class="sapUiMediumMarginEnd"
+                        >
+                            <Label
+                                id="salesDataOverviewLabel"
+                                text="Data Overview:"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="salesTotalRecordsText"
+                                text="Total Records: {salesData>/count}"
+                            />
+                            <Text
+                                id="salesLoadedRecordsText"
+                                text="Records Loaded: {pagination>/loadedRecords} of {pagination>/totalRecords}"
+                            />
+                            <Text
+                                id="salesLastUpdatedText"
+                                text="Last Updated: {
+                                    path: 'salesData>/lastLoadTime',
+                                    formatter: '.formatDate'
+                                }"
+                            />
+                        </VBox>
+
+                        <VBox
+                            id="salesPeriodStatsVBox"
+                            class="sapUiMediumMarginEnd"
+                        >
+                            <Label
+                                id="salesPeriodInfoLabel"
+                                text="Period Information:"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="salesSelectedPeriodText"
+                                text="Selected Period: {salesData>/periodDisplay}"
+                            />
+                            <Text
+                                id="salesTotalNetText"
+                                text="Total Net: {salesData>/periodStats/totalNet} {salesData>/periodStats/currency}"
+                            />
+                            <Text
+                                id="salesTotalDiscountText"
+                                text="Total Discount: {salesData>/periodStats/totalDiscount} {salesData>/periodStats/currency}"
+                            />
+                        </VBox>
+
+                        <VBox
+                            id="salesActiveFiltersVBox"
+                            class="sapUiMediumMarginEnd"
+                        >
+                            <Label
+                                id="salesActiveFiltersLabel"
+                                text="Active Filters:"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="salesBillingDocFilterText"
+                                text="Billing Document: {= ${filterData>/billingDocument} || 'None'}"
+                            />
+                            <Text
+                                id="salesSalesOrderFilterText"
+                                text="Sales Order: {= ${filterData>/salesOrder} || 'None'}"
+                            />
+                            <Text
+                                id="salesMaterialFilterText"
+                                text="Material: {= ${filterData>/material} || 'None'}"
+                            />
+                            <Text
+                                id="salesRegionFilterText"
+                                text="Customer State: {= ${filterData>/region} || 'None'}"
+                            />
+                            <Text
+                                id="salesDocTypeFilterText"
+                                text="Doc Type: {= ${filterData>/billingDocumentType} || 'None'}"
+                            />
+                            <Text
+                                id="salesGroupingFilterText"
+                                text="Grouping: {= ${filterData>/groupBySalesOrder} ? 'Sales Order (with Text)' : (${filterData>/groupByDocument} ? 'Billing Document' : 'None')}"
+                            />
+                        </VBox>
+
+                        <VBox
+                            id="salesEnhancedInfoVBox"
+                            class="sapUiMediumMarginEnd"
+                        >
+                            <Label
+                                id="salesEnhancedInfoLabel"
+                                text="Enhanced Features:"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="salesSOTextEnabledText"
+                                text="Sales Order Text: {= ${filterData>/groupBySalesOrder} ? 'Enabled' : 'Disabled'}"
+                            />
+                            <Text
+                                id="salesConditionTypesText"
+                                text="Condition Types: Available"
+                            />
+                            <Text
+                                id="salesAPIStatusText"
+                                text="SO API: Connected"
+                            />
+                        </VBox>
+
+                        <VBox
+                            id="salesLoadingStatusVBox"
+                            class="sapUiMediumMarginEnd"
+                            visible="{loadingState>/loading}"
+                        >
+                            <Label
+                                id="salesLoadingStatusLabel"
+                                text="Loading Status:"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="salesLoadingOperationText"
+                                text="Operation: {loadingState>/currentOperation}"
+                            />
+                            <Text
+                                id="salesLoadingStepText"
+                                text="Step: {loadingState>/currentStep} of {loadingState>/totalSteps}"
+                            />
+                            <Text
+                                id="salesLoadingProgressPercentText"
+                                text="Progress: {loadingState>/progress}%"
+                            />
+                        </VBox>
+                    </HBox>
+                </content>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

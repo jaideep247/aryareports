@@ -1,0 +1,707 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core"
+>
+    <Dialog
+        id="detailsDialog"
+        title="Record Details: {details>BillingDocument}"
+        contentWidth="800px"
+        contentHeight="600px"
+        resizable="true"
+        draggable="true"
+    >
+        <ScrollContainer
+            id="detailsDialogScrollContainer"
+            height="100%"
+            vertical="true"
+            horizontal="false"
+            class="sapUiContentPadding"
+        >
+            <VBox
+                id="detailsDialogMainContainer"
+                class="sapUiMediumMargin"
+            >
+                <!-- General Information Section -->
+                <Panel
+                    id="detailsDialogGeneralPanel"
+                    headerText="General Information"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <l:Grid
+                        id="detailsDialogGeneralGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <VBox id="detailsDialogBillingDocContainer">
+                            <Label
+                                id="detailsDialogBillingDocLabel"
+                                text="SAP Invoice No."
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogBillingDocText"
+                                text="{details>BillingDocument}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogBillingDateContainer">
+                            <Label
+                                id="detailsDialogBillingDateLabel"
+                                text="Billing Date"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogBillingDateText"
+                                text="{path: 'details>BillingDocumentDate', formatter: '.formatDate'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogDocTypeContainer">
+                            <Label
+                                id="detailsDialogDocTypeLabel"
+                                text="Invoice Type"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogDocTypeText"
+                                text="{details>BillingDocumentType}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogSalesDocContainer">
+                            <Label
+                                id="detailsDialogSalesDocLabel"
+                                text="Sales Document"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogSalesDocText"
+                                text="{details>SalesDocument}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogCustomerNameContainer">
+                            <Label
+                                id="detailsDialogCustomerNameLabel"
+                                text="Customer Name"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogCustomerNameText"
+                                text="{details>CustomerFullName_1}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogBusinessPartnerContainer">
+                            <Label
+                                id="detailsDialogBusinessPartnerLabel"
+                                text="Business Partner"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogBusinessPartnerText"
+                                text="{details>BusinessPartnerName1}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                    </l:Grid>
+                </Panel>
+
+                <!-- Financial Details Section -->
+                <Panel
+                    id="detailsDialogFinancialPanel"
+                    headerText="Financial Details"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <l:Grid
+                        id="detailsDialogFinancialGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <VBox id="detailsDialogTotalNetContainer">
+                            <Label
+                                id="detailsDialogTotalNetLabel"
+                                text="Total Net Amount"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogTotalNetObjectNumber"
+                                number="{parts: ['details>TotalNetAmount', 'details>TransactionCurrency'], formatter: '.formatCurrency'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogDiscountContainer">
+                            <Label
+                                id="detailsDialogDiscountLabel"
+                                text="Discount"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogDiscountObjectNumber"
+                                number="{parts: ['details>Discount', 'details>TransactionCurrency'], formatter: '.formatCurrency'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogNetAfterDiscountContainer">
+                            <Label
+                                id="detailsDialogNetAfterDiscountLabel"
+                                text="Net After Discount"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogNetAfterDiscountObjectNumber"
+                                number="{parts: ['details>NetAfterDiscount', 'details>TransactionCurrency'], formatter: '.formatCurrency'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogConditionAmountContainer">
+                            <Label
+                                id="detailsDialogConditionAmountLabel"
+                                text="Condition Amount"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogConditionAmountObjectNumber"
+                                number="{parts: ['details>ConditionAmount', 'details>TransactionCurrency'], formatter: '.formatCurrency'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogCurrencyContainer">
+                            <Label
+                                id="detailsDialogCurrencyLabel"
+                                text="Transaction Currency"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogCurrencyText"
+                                text="{details>TransactionCurrency}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                    </l:Grid>
+                </Panel>
+
+                <!-- Product Details Section -->
+                <Panel
+                    id="detailsDialogProductPanel"
+                    headerText="Product Details"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <l:Grid
+                        id="detailsDialogProductGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <VBox id="detailsDialogMaterialContainer">
+                            <Label
+                                id="detailsDialogMaterialLabel"
+                                text="Material Code"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogMaterialText"
+                                text="{details>Material}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogProductContainer">
+                            <Label
+                                id="detailsDialogProductLabel"
+                                text="Product"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogProductText"
+                                text="{details>Product}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogQuantityContainer">
+                            <Label
+                                id="detailsDialogQuantityLabel"
+                                text="Quantity"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogQuantityText"
+                                text="{details>QuantityFormatted}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogUnitContainer">
+                            <Label
+                                id="detailsDialogUnitLabel"
+                                text="Unit"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogUnitText"
+                                text="{details>BillingQuantityUnit}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                    </l:Grid>
+                </Panel>
+
+                <!-- NEW: Sales Order Text Information Section -->
+                <Panel
+                    id="detailsDialogSalesOrderTextPanel"
+                    headerText="Warehouse &amp;&amp;Contract Information (Sales Order Text)"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <l:Grid
+                        id="detailsDialogSalesOrderTextGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <!-- Date Range (ZXT5) -->
+                        <VBox id="detailsDialogZXT5Container">
+                            <Label
+                                id="detailsDialogZXT5Label"
+                                text="Date Range (ZXT5)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT5Text"
+                                text="{details>ZXT5}"
+                                visible="{= ${details>ZXT5} !== null &amp;&amp; ${details>ZXT5} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Warehouse Code (ZXT1) -->
+                        <VBox id="detailsDialogZXT1Container">
+                            <Label
+                                id="detailsDialogZXT1Label"
+                                text="Warehouse Code (ZXT1)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT1Text"
+                                text="{details>ZXT1}"
+                                visible="{= ${details>ZXT1} !== null &amp;&amp; ${details>ZXT1} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Contract (ZXT4) -->
+                        <VBox id="detailsDialogZXT4Container">
+                            <Label
+                                id="detailsDialogZXT4Label"
+                                text="Contract (ZXT4)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT4Text"
+                                text="{details>ZXT4}"
+                                visible="{= ${details>ZXT4} !== null &amp;&amp; ${details>ZXT4} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Flag (ZXT7) -->
+                        <VBox id="detailsDialogZXT7Container">
+                            <Label
+                                id="detailsDialogZXT7Label"
+                                text="Flag (ZXT7)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT7Text"
+                                text="{details>ZXT7}"
+                                visible="{= ${details>ZXT7} !== null &amp;&amp; ${details>ZXT7} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Item Number (ZXT8) -->
+                        <VBox id="detailsDialogZXT8Container">
+                            <Label
+                                id="detailsDialogZXT8Label"
+                                text="Item Number (ZXT8)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT8Text"
+                                text="{details>ZXT8}"
+                                visible="{= ${details>ZXT8} !== null &amp;&amp; ${details>ZXT8} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Warehouse Location (ZXT3) -->
+                        <VBox id="detailsDialogZXT3Container">
+                            <Label
+                                id="detailsDialogZXT3Label"
+                                text="Warehouse Location (ZXT3)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT3Text"
+                                text="{details>ZXT3}"
+                                visible="{= ${details>ZXT3} !== null &amp;&amp; ${details>ZXT3} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Description (ZXT6) -->
+                        <VBox id="detailsDialogZXT6Container">
+                            <Label
+                                id="detailsDialogZXT6Label"
+                                text="Description (ZXT6)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogZXT6Text"
+                                text="{details>ZXT6}"
+                                visible="{= ${details>ZXT6} !== null &amp;&amp; ${details>ZXT6} !== undefined}"
+                                class="sapUiSmallMarginBottom"
+                                wrapping="true"
+                                maxLines="3"
+                            />
+                        </VBox>
+                    </l:Grid>
+                </Panel>
+
+                <!-- Key Condition Types &amp;&amp;Invoice Amount Section -->
+                <Panel
+                    id="detailsDialogConditionTypesPanel"
+                    headerText="Key Condition Types &amp;&amp;Invoice Amount"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <!-- Summary Section -->
+                    <VBox
+                        id="detailsDialogConditionTypesSummary"
+                        class="sapUiMediumMargin"
+                    >
+                        <HBox
+                            id="detailsDialogSummaryHBox"
+                            alignItems="Center"
+                            justifyContent="SpaceBetween"
+                            class="sapUiSmallMarginBottom"
+                        >
+                            <Title
+                                id="detailsDialogSummaryTitle"
+                                text="Invoice Amount Calculation"
+                                level="H4"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogSummaryInvoiceAmount"
+                                number="{= ${details>TotalNetAmount} + ${details>Discount}}"
+                                unit="{details>TransactionCurrency}"
+                                state="{= (${details>TotalNetAmount} + ${details>Discount}) > 100000 ? 'Success' : 'None'}"
+                                class="sapUiMediumMarginEnd"
+                            />
+                        </HBox>
+                        <Text
+                            id="detailsDialogSummaryDescription"
+                            text="Sum of Net Amount + Discount + Key Condition Types (IGST, CGST, SGST, Additional Charges, Delay Charges, TCS)"
+                            class="sapUiTinyMarginBottom"
+                        />
+                    </VBox>
+
+                    <l:Grid
+                        id="detailsDialogConditionTypesGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <!-- Invoice Amount -->
+                        <VBox id="detailsDialogInvoiceAmountContainer">
+                            <Label
+                                id="detailsDialogInvoiceAmountLabel"
+                                text="Invoice Amount (Calculated)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogInvoiceAmountText"
+                                number="{details>InvoiceAmount}"
+                                unit="{details>TransactionCurrency}"
+                                state="{= ${details>InvoiceAmount} > 100000 ? 'Success' : 'None'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogInvoiceAmountBreakdown"
+                                text="Includes: Base Amount (TotalNetAmount) + ZDV2 + JOIG + JOCG + JOSG - DRV1 (deducted). PPR0 is not added to prevent double-counting."
+                                class="sapUiTinyMarginTop sapUiTinyMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Rate/MT (PPR0) -->
+                        <VBox id="detailsDialogPPR0Container">
+                            <Label
+                                id="detailsDialogPPR0Label"
+                                text="Rate/MT (PPR0)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogPPR0Text"
+                                number="{= ${details>ConditionType} === 'PPR0' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'PPR0'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- IGST (JOIG) -->
+                        <VBox id="detailsDialogJOIGContainer">
+                            <Label
+                                id="detailsDialogJOIGLabel"
+                                text="IGST (JOIG)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogJOIGText"
+                                number="{= ${details>ConditionType} === 'JOIG' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'JOIG'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- CGST (JOCG) -->
+                        <VBox id="detailsDialogJOCGContainer">
+                            <Label
+                                id="detailsDialogJOCGLabel"
+                                text="CGST (JOCG)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogJOCGText"
+                                number="{= ${details>ConditionType} === 'JOCG' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'JOCG'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- SGST (JOSG) -->
+                        <VBox id="detailsDialogJOSGContainer">
+                            <Label
+                                id="detailsDialogJOSGLabel"
+                                text="SGST (JOSG)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogJOSGText"
+                                number="{= ${details>ConditionType} === 'JOSG' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'JOSG'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Additional Charges (ZDV2) -->
+                        <VBox id="detailsDialogZDV2Container">
+                            <Label
+                                id="detailsDialogZDV2Label"
+                                text="Additional Charges (ZDV2)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogZDV2Text"
+                                number="{= ${details>ConditionType} === 'ZDV2' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'ZDV2'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- Delay Charges (ZDV4) -->
+                        <VBox id="detailsDialogZDV4Container">
+                            <Label
+                                id="detailsDialogZDV4Label"
+                                text="Delay Charges (ZDV4)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogZDV4Text"
+                                number="{= ${details>ConditionType} === 'ZDV4' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'ZDV4'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+
+                        <!-- TCS (ZTCS) -->
+                        <VBox id="detailsDialogZTCSContainer">
+                            <Label
+                                id="detailsDialogZTCSLabel"
+                                text="TCS (ZTCS)"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <ObjectNumber
+                                id="detailsDialogZTCSText"
+                                number="{= ${details>ConditionType} === 'ZTCS' ? ${details>ConditionAmount} : null}"
+                                unit="{details>TransactionCurrency}"
+                                visible="{= ${details>ConditionType} === 'ZTCS'}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                    </l:Grid>
+
+                    <!-- Aggregated Condition Type Values -->
+                    <VBox id="detailsDialogAggregatedConditionsContainer">
+                        <Label
+                            id="detailsDialogAggregatedConditionsLabel"
+                            text="Aggregated Condition Values"
+                            class="sapUiTinyMarginBottom"
+                        />
+                        <HBox
+                            id="detailsDialogAggregatedConditionsBox"
+                            alignItems="Center"
+                            class="sapUiTinyMarginTop"
+                        >
+                            <Text
+                                id="detailsDialogPPR0AggregatedText"
+                                text="{= ${details>PPR0} ? 'PPR0: ' + ${details>PPR0} : ''}"
+                                visible="{= ${details>PPR0} !== null &amp;&amp; ${details>PPR0} !== undefined &amp;&amp; ${details>PPR0} !== '0.00'}"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                id="detailsDialogDRV1Text"
+                                text="{= ${details>DRV1} ? 'DRV1: -' + ${details>DRV1} + ' (deducted)' : ''}"
+                                visible="{= ${details>DRV1} !== null &amp;&amp; ${details>DRV1} !== undefined &amp;&amp; ${details>DRV1} !== '0.00'}"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                id="detailsDialogAggregatedZDV2Text"
+                                text="{= ${details>ZDV2} ? 'ZDV2: ' + ${details>ZDV2} : ''}"
+                                visible="{= ${details>ZDV2} !== null &amp;&amp; ${details>ZDV2} !== undefined &amp;&amp; ${details>ZDV2} !== '0.00'}"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                id="detailsDialogAggregatedJOIGText"
+                                text="{= ${details>JOIG} ? 'JOIG: ' + ${details>JOIG} : ''}"
+                                visible="{= ${details>JOIG} !== null &amp;&amp; ${details>JOIG} !== undefined &amp;&amp; ${details>JOIG} !== '0.00'}"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                id="detailsDialogAggregatedJOCGText"
+                                text="{= ${details>JOCG} ? 'JOCG: ' + ${details>JOCG} : ''}"
+                                visible="{= ${details>JOCG} !== null &amp;&amp; ${details>JOCG} !== undefined &amp;&amp; ${details>JOCG} !== '0.00'}"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                id="detailsDialogAggregatedJOSGText"
+                                text="{= ${details>JOSG} ? 'JOSG: ' + ${details>JOSG} : ''}"
+                                visible="{= ${details>JOSG} !== null &amp;&amp; ${details>JOSG} !== undefined &amp;&amp; ${details>JOSG} !== '0.00'}"
+                            />
+                        </HBox>
+                    </VBox>
+                </Panel>
+
+                <!-- Location &amp;&amp;Organization Section -->
+                <Panel
+                    id="detailsDialogLocationPanel"
+                    headerText="Location &amp;&amp;Organization"
+                    expandable="false"
+                    class="sapUiResponsiveMargin"
+                >
+                    <l:Grid
+                        id="detailsDialogLocationGrid"
+                        defaultSpan="XL6 L6 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        class="sapUiSmallMargin"
+                    >
+                        <VBox id="detailsDialogRegionContainer">
+                            <Label
+                                id="detailsDialogRegionLabel"
+                                text="Customer State"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogRegionText"
+                                text="{details>Region}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogPlantContainer">
+                            <Label
+                                id="detailsDialogPlantLabel"
+                                text="Plant"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogPlantText"
+                                text="{details>Plant}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogDivisionContainer">
+                            <Label
+                                id="detailsDialogDivisionLabel"
+                                text="Division"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogDivisionText"
+                                text="{details>Division}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogProfitCenterContainer">
+                            <Label
+                                id="detailsDialogProfitCenterLabel"
+                                text="Profit Center"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogProfitCenterText"
+                                text="{details>ProfitCenter}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogTaxCodeContainer">
+                            <Label
+                                id="detailsDialogTaxCodeLabel"
+                                text="Tax Code"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogTaxCodeText"
+                                text="{details>TaxCode}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                        <VBox id="detailsDialogConditionTypeContainer">
+                            <Label
+                                id="detailsDialogConditionTypeLabel"
+                                text="Condition Type"
+                                class="sapUiTinyMarginBottom"
+                            />
+                            <Text
+                                id="detailsDialogConditionTypeText"
+                                text="{details>ConditionType}"
+                                class="sapUiSmallMarginBottom"
+                            />
+                        </VBox>
+                    </l:Grid>
+                </Panel>
+            </VBox>
+        </ScrollContainer>
+        <beginButton>
+            <Button
+                id="detailsDialogCloseButton"
+                text="Close"
+                press="onCloseDetailsDialog"
+            />
+        </beginButton>
+    </Dialog>
+</core:FragmentDefinition>

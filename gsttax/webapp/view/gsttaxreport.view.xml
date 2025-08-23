@@ -1,0 +1,1191 @@
+<mvc:View
+    controllerName="gsttax.controller.gsttaxreport"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:table="sap.ui.table"
+    height="100%"
+>
+    <Page
+        id="page"
+        title="GST Tax Report"
+        enableScrolling="false"
+        class="sapUiSizeCompact"
+    >
+        <content>
+            <Panel
+                id="filterPanel"
+                headerText="Filters"
+                expandable="true"
+                expanded="true"
+                class="sapUiMediumMargin"
+            >
+                <content>
+                    <VBox
+                        id="_IDGenVBox"
+                        class="sapUiMediumMargin"
+                    >
+                        <HBox
+                            id="_IDGenHBox"
+                            wrap="Wrap"
+                            class="sapUiSmallMarginBottom"
+                        >
+                            <VBox
+                                id="_IDGenVBox1"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="_IDGenLabel"
+                                    text="Company Code:"
+                                />
+                                <Input
+                                    id="_IDGenInput"
+                                    value="{filterData>/companyCode}"
+                                    placeholder="e.g., 1000"
+                                    maxLength="4"
+                                    width="150px"
+                                />
+                            </VBox>
+                            <VBox
+                                id="_IDGenVBox2"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="_IDGenLabel1"
+                                    text="Fiscal Year:"
+                                />
+                                <Input
+                                    id="_IDGenInput1"
+                                    value="{filterData>/fiscalYear}"
+                                    placeholder="e.g., 2024"
+                                    maxLength="4"
+                                    width="150px"
+                                />
+                            </VBox>
+                            <VBox
+                                id="_IDGenVBox3"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="_IDGenLabel2"
+                                    text="Posting Date Range:"
+                                />
+                                <DateRangeSelection
+                                    id="dateRange"
+                                    from="{filterData>/fromDate}"
+                                    to="{filterData>/toDate}"
+                                    width="250px"
+                                    placeholder="Select date range"
+                                />
+                            </VBox>
+                        </HBox>
+
+                        <HBox
+                            id="_IDGenHBox1"
+                            wrap="Wrap"
+                            class="sapUiSmallMarginBottom"
+                        >
+                            <VBox
+                                id="_IDGenVBox4"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="_IDGenLabel3"
+                                    text="Accounting Document:"
+                                />
+                                <VBox id="_IDGenVBox10">
+                                    <HBox id="_IDGenHBox2">
+                                        <Input
+                                            id="accountingDocFrom"
+                                            value="{filterData>/accountingDocumentRange/from}"
+                                            placeholder="From Document"
+                                            maxLength="12"
+                                            width="140px"
+                                            class="sapUiTinyMarginEnd"
+                                        />
+                                        <Text
+                                            id="docRangeSeparator"
+                                            text="to"
+                                            class="sapUiTinyMarginTop sapUiTinyMarginEnd sapUiTinyMarginBegin"
+                                        />
+                                        <Input
+                                            id="accountingDocTo"
+                                            value="{filterData>/accountingDocumentRange/to}"
+                                            placeholder="To Document"
+                                            maxLength="12"
+                                            width="140px"
+                                        />
+                                    </HBox>
+                                    <Text
+                                        id="docFilterHint"
+                                        text="Tip: Enter same number in both fields for exact match"
+                                        class="sapUiSmallMarginTop"
+                                        wrapping="true"
+                                        width="300px"
+                                    >
+                                        <customData>
+                                            <core:CustomData
+                                                key="style"
+                                                value="font-size: 0.75rem; color: #6a6d70; font-style: italic;"
+                                            />
+                                        </customData>
+                                    </Text>
+                                </VBox>
+                            </VBox>
+                            <VBox
+                                id="_IDGenVBox5"
+                                class="sapUiMediumMarginEnd"
+                            >
+                                <Label
+                                    id="_IDGenLabel4"
+                                    text="Quick Date Filters:"
+                                />
+                                <HBox id="_IDGenHBox3">
+                                    <Button
+                                        id="_IDGenButton"
+                                        text="Current Month"
+                                        press="onQuickFilterCurrentMonth"
+                                        class="sapUiTinyMarginEnd"
+                                        type="Ghost"
+                                    />
+                                    <Button
+                                        id="_IDGenButton1"
+                                        text="Current Quarter"
+                                        press="onQuickFilterCurrentQuarter"
+                                        type="Ghost"
+                                        class="sapUiTinyMarginEnd"
+                                    />
+                                    <Button
+                                        id="_IDGenButton2"
+                                        text="Current Year"
+                                        press="onQuickFilterCurrentYear"
+                                        class="sapUiTinyMarginEnd"
+                                        type="Ghost"
+                                    />
+                                    <Button
+                                        id="_IDGenButton3"
+                                        text="Last Month"
+                                        press="onQuickFilterLastMonth"
+                                        type="Ghost"
+                                    />
+                                </HBox>
+                            </VBox>
+                        </HBox>
+
+                        <HBox
+                            id="actionButtonsHBox"
+                            justifyContent="End"
+                            alignItems="End"
+                            class="sapUiSmallMarginTop"
+                        >
+                            <Button
+                                id="exactDocSearchBtn"
+                                text="Search Exact Document"
+                                press="onSearchExactDocument"
+                                icon="sap-icon://search"
+                                type="Ghost"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Button
+                                id="loadDataBtn"
+                                text="Load Data"
+                                type="Emphasized"
+                                press="onLoadData"
+                                class="sapUiTinyMarginEnd"
+                                icon="sap-icon://refresh"
+                            />
+                            <Button
+                                id="clearFiltersBtn"
+                                text="Clear Filters"
+                                press="onClearFilters"
+                                class="sapUiTinyMarginEnd"
+                                icon="sap-icon://clear-all"
+                            />
+                            <Button
+                                id="showSummaryBtn"
+                                text="Show Summary"
+                                press="onShowSummary"
+                                icon="sap-icon://pie-chart"
+                                type="Ghost"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Button
+                                id="testConnectionBtn"
+                                text="Test Connection"
+                                press="onTestConnection"
+                                icon="sap-icon://test"
+                                type="Ghost"
+                                class="sapUiTinyMarginEnd"
+                            />
+                        </HBox>
+                    </VBox>
+                </content>
+            </Panel>
+
+            <Toolbar id="mainToolbar">
+                <Title
+                    id="tableTitle"
+                    text="GST Tax Report - Grouped by Document ({mergedData>/count} groups from {mergedData>/originalRecordCount} records)"
+                />
+                <ToolbarSpacer id="_IDGenToolbarSpacer" />
+
+                <HBox
+                    id="paginationControls"
+                    visible="{= ${pagination>/totalRecords} > 0}"
+                >
+                    <Button
+                        id="loadMoreBtn"
+                        text="Load More ({= ${pagination>/totalRecords} - ${pagination>/loadedRecords}} remaining)"
+                        icon="sap-icon://add"
+                        press="onLoadMoreData"
+                        enabled="{pagination>/hasMore}"
+                        type="Ghost"
+                        class="sapUiTinyMarginEnd"
+                    />
+                    <Button
+                        id="loadAllBtn"
+                        text="Load All"
+                        icon="sap-icon://download"
+                        press="onLoadAllData"
+                        enabled="{pagination>/hasMore}"
+                        type="Ghost"
+                        class="sapUiTinyMarginEnd"
+                    />
+                </HBox>
+
+                <SearchField
+                    id="tableSearchField"
+                    width="200px"
+                    placeholder="Search table..."
+                    search="onTableSearch"
+                    class="sapUiTinyMarginEnd"
+                />
+                <Button
+                    id="exportAllBtn"
+                    text="Export All"
+                    icon="sap-icon://excel-attachment"
+                    press="onExportToExcel"
+                    type="Ghost"
+                    class="sapUiTinyMarginEnd"
+                />
+                <Button
+                    id="exportCurrentViewBtn"
+                    text="Export Current View"
+                    icon="sap-icon://table-view"
+                    press="onExportCurrentView"
+                    type="Ghost"
+                    class="sapUiTinyMarginEnd"
+                />
+            </Toolbar>
+
+            <BusyIndicator
+                id="mainBusyIndicator"
+                visible="{loadingState>/loading}"
+                class="sapUiMediumMargin"
+                text="{loadingState>/currentOperation}"
+            />
+
+            <Panel
+                id="progressPanel"
+                visible="{= ${loadingState>/loading} &amp;&amp; ${pagination>/totalRecords} > 0}"
+                class="sapUiMediumMargin"
+                headerText="Loading Progress"
+            >
+                <content>
+                    <VBox
+                        id="progressVBox"
+                        class="sapUiMediumMargin"
+                    >
+                        <ProgressIndicator
+                            id="loadingProgress"
+                            percentValue="{= ${pagination>/loadedRecords} / ${pagination>/totalRecords} * 100}"
+                            displayValue="{= ${pagination>/loadedRecords} + ' / ' + ${pagination>/totalRecords} + ' records'}"
+                            state="Information"
+                        />
+                        <Text
+                            id="progressText"
+                            text="{= Math.round(${pagination>/loadedRecords} / ${pagination>/totalRecords} * 100) + '% complete'}"
+                            class="sapUiSmallMarginTop"
+                            wrapping="true"
+                        />
+                    </VBox>
+                </content>
+            </Panel>
+
+            <VBox
+                id="_IDGenVBox11"
+                class="sapUiMediumMargin"
+                height="100%"
+            >
+                <table:Table
+                    id="gstTaxTable"
+                    rows="{mergedData>/results}"
+                    visibleRowCount="20"
+                    fixedColumnCount="3"
+                    selectionMode="MultiToggle"
+                    enableColumnReordering="true"
+                    enableColumnFreeze="true"
+                    columnHeaderVisible="true"
+                    width="100%"
+                    visible="{= !${loadingState>/loading}}"
+                >
+                    <table:extension>
+                        <Toolbar id="_IDGenToolbar">
+                            <Title
+                                id="_IDGenTitle"
+                                text="Grouped GST Tax Data (Summed by Document)"
+                            />
+                            <ToolbarSpacer id="_IDGenToolbarSpacer1" />
+                            <MenuButton
+                                id="columnVisibilityBtn"
+                                text="Show/Hide Columns"
+                                icon="sap-icon://action-settings"
+                                type="Ghost"
+                                class="sapUiTinyMarginEnd"
+                            >
+                                <menu>
+                                    <Menu id="columnVisibilityMenu">
+                                        <items>
+                                            <MenuItem
+                                                id="_IDGenMenuItem"
+                                                text="Basic Info"
+                                                enabled="false"
+                                            />
+                                            <MenuItem
+                                                id="_IDGenMenuItem1"
+                                                text="─ Company Code"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="companyCodeCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem2"
+                                                text="─ Document No."
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="docNumberCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem3"
+                                                text="─ Fiscal Year"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="fiscalYearCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem4"
+                                                text="─ Document Type"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="documentTypeCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem5"
+                                                text="─ Document Type Name"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="documentTypeNameCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem6"
+                                                text="─ Document Date"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="documentDateCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem7"
+                                                text="─ Reversal Reference"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="reversalReferenceCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem8"
+                                                text="─ Is Reversal"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="isReversalCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem9"
+                                                text="─ Business Place"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="businessPlaceCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+
+                                            <MenuItem
+                                                id="_IDGenMenuItem10"
+                                                text="Financial Data"
+                                                enabled="false"
+                                            />
+                                            <MenuItem
+                                                id="_IDGenMenuItem11"
+                                                text="─ Taxable Amount"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="taxableAmountCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem12"
+                                                text="─ Tax Amount"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="taxAmountCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem13"
+                                                text="─ Grand Total"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="grandTotalCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+
+                                            <MenuItem
+                                                id="_IDGenMenuItem14"
+                                                text="Partner &amp; Location"
+                                                enabled="false"
+                                            />
+                                            <MenuItem
+                                                id="_IDGenMenuItem15"
+                                                text="─ Customer"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="customerCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem16"
+                                                text="─ Customer Name"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="customerNameCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem17"
+                                                text="─ GST Number"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="gstNumberCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem18"
+                                                text="─ Place of Supply"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="placeOfSupplyCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem19"
+                                                text="─ Region"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="regionCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+
+                                            <MenuItem
+                                                id="_IDGenMenuItem20"
+                                                text="Currency &amp; Details"
+                                                enabled="false"
+                                            />
+                                            <MenuItem
+                                                id="_IDGenMenuItem21"
+                                                text="─ Currency"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://decline"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="currencyCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem22"
+                                                text="─ Details"
+                                                press="onToggleColumn"
+                                                icon="sap-icon://accept"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="columnId"
+                                                        value="actionsCol"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                        </items>
+                                    </Menu>
+                                </menu>
+                            </MenuButton>
+                            <MenuButton
+                                id="quickSortBtn"
+                                text="Sort"
+                                icon="sap-icon://sort"
+                                type="Ghost"
+                                class="sapUiTinyMarginEnd"
+                            >
+                                <menu>
+                                    <Menu id="quickSortMenu">
+                                        <items>
+                                            <MenuItem
+                                                id="_IDGenMenuItem23"
+                                                text="Company Code ↑"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="CompanyCode"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="false"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem24"
+                                                text="Company Code ↓"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="CompanyCode"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="true"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem25"
+                                                text="Document No. ↑"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="AccountingDocument"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="false"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem26"
+                                                text="Document No. ↓"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="AccountingDocument"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="true"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem27"
+                                                text="Document Type ↑"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="AccountingDocumentType_1"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="false"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem28"
+                                                text="Document Type ↓"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="AccountingDocumentType_1"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="true"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem29"
+                                                text="Tax Amount ↑"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="TotalTaxAmount"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="false"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem30"
+                                                text="Tax Amount ↓"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="TotalTaxAmount"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="true"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem31"
+                                                text="Grand Total ↑"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="GrandTotal"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="false"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                            <MenuItem
+                                                id="_IDGenMenuItem32"
+                                                text="Grand Total ↓"
+                                                press="onQuickSort"
+                                            >
+                                                <customData>
+                                                    <core:CustomData
+                                                        key="property"
+                                                        value="GrandTotal"
+                                                    />
+                                                    <core:CustomData
+                                                        key="descending"
+                                                        value="true"
+                                                    />
+                                                </customData>
+                                            </MenuItem>
+                                        </items>
+                                    </Menu>
+                                </menu>
+                            </MenuButton>
+                        </Toolbar>
+                    </table:extension>
+
+                    <table:columns>
+                        <table:Column
+                            id="companyCodeCol"
+                            width="8rem"
+                            sortProperty="CompanyCode"
+                            filterProperty="CompanyCode"
+                        >
+                            <Label
+                                id="_IDGenLabel7"
+                                text="Company Code"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText"
+                                    text="{mergedData>CompanyCode}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="docNumberCol"
+                            width="12rem"
+                            sortProperty="AccountingDocument"
+                            filterProperty="AccountingDocument"
+                        >
+                            <Label
+                                id="_IDGenLabel8"
+                                text="Document No."
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText1"
+                                    text="{mergedData>AccountingDocument}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="fiscalYearCol"
+                            width="8rem"
+                            sortProperty="FiscalYear"
+                            filterProperty="FiscalYear"
+                        >
+                            <Label
+                                id="_IDGenLabel9"
+                                text="Fiscal Year"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText2"
+                                    text="{mergedData>FiscalYear}"
+                                />
+                            </table:template>
+                        </table:Column>
+
+                        <table:Column
+                            id="documentTypeCol"
+                            width="10rem"
+                            sortProperty="AccountingDocumentType_1"
+                            filterProperty="AccountingDocumentType_1"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel10"
+                                text="Document Type"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText3"
+                                    text="{mergedData>AccountingDocumentType_1}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="documentTypeNameCol"
+                            width="15rem"
+                            sortProperty="AccountingDocumentTypeName_1"
+                            filterProperty="AccountingDocumentTypeName_1"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel11"
+                                text="Document Type Name"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText4"
+                                    text="{mergedData>AccountingDocumentTypeName_1}"
+                                    maxLines="2"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="documentDateCol"
+                            width="10rem"
+                            sortProperty="DocumentDate"
+                            filterProperty="DocumentDate"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel12"
+                                text="Document Date"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText5"
+                                    text="{path: 'mergedData>DocumentDate', formatter: '.formatDate'}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="reversalReferenceCol"
+                            width="12rem"
+                            sortProperty="ReversalReferenceDocument"
+                            filterProperty="ReversalReferenceDocument"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel13"
+                                text="Reversal Reference"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText6"
+                                    text="{mergedData>ReversalReferenceDocument}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="isReversalCol"
+                            width="8rem"
+                            sortProperty="IsReversal"
+                            filterProperty="IsReversal"
+                            hAlign="Center"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel15"
+                                text="Is Reversal"
+                            />
+                            <table:template>
+                                <ObjectStatus
+                                    id="_IDGenObjectStatus"
+                                    text="{path: 'mergedData>IsReversal', formatter: '.formatBoolean'}"
+                                    state="{= ${mergedData>IsReversal} ? 'Warning' : 'Success'}"
+                                    icon="{= ${mergedData>IsReversal} ? 'sap-icon://warning' : 'sap-icon://accept'}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="businessPlaceCol"
+                            width="12rem"
+                            sortProperty="BusinessPlace"
+                            filterProperty="BusinessPlace"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel18"
+                                text="Business Place"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText7"
+                                    text="{mergedData>BusinessPlace}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="gstNumberCol"
+                            width="15rem"
+                            sortProperty="BPTaxNumber"
+                            filterProperty="BPTaxNumber"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel19"
+                                text="GST Number"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText8"
+                                    text="{mergedData>BPTaxNumber}"
+                                    maxLines="1"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="placeOfSupplyCol"
+                            width="10rem"
+                            sortProperty="IN_GSTPlaceOfSupply"
+                            filterProperty="IN_GSTPlaceOfSupply"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel20"
+                                text="Place of Supply"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText9"
+                                    text="{mergedData>IN_GSTPlaceOfSupply}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="regionCol"
+                            width="8rem"
+                            sortProperty="Region"
+                            filterProperty="Region"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel21"
+                                text="Region"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText22"
+                                    text="{mergedData>Region}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="currencyCol"
+                            width="8rem"
+                            sortProperty="TransactionCurrency"
+                            filterProperty="TransactionCurrency"
+                            visible="false"
+                        >
+                            <Label
+                                id="_IDGenLabel33"
+                                text="Currency"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText23"
+                                    text="{mergedData>TransactionCurrency}"
+                                />
+                            </table:template>
+                        </table:Column>
+
+                        <table:Column
+                            id="customerCol"
+                            width="10rem"
+                            sortProperty="Customer"
+                            filterProperty="Customer"
+                        >
+                            <Label
+                                id="_IDGenLabel34"
+                                text="Customer"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText24"
+                                    text="{mergedData>Customer}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="customerNameCol"
+                            width="15rem"
+                            sortProperty="CustomerName"
+                            filterProperty="CustomerName"
+                        >
+                            <Label
+                                id="_IDGenLabel35"
+                                text="Customer Name"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText25"
+                                    text="{mergedData>CustomerName}"
+                                    maxLines="2"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="postingDateCol"
+                            width="10rem"
+                            sortProperty="PostingDate"
+                            filterProperty="PostingDate"
+                        >
+                            <Label
+                                id="_IDGenLabel36"
+                                text="Posting Date"
+                            />
+                            <table:template>
+                                <Text
+                                    id="_IDGenText26"
+                                    text="{path: 'mergedData>PostingDate', formatter: '.formatDate'}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="taxableAmountCol"
+                            width="12rem"
+                            sortProperty="TaxableAmount"
+                            hAlign="End"
+                        >
+                            <Label
+                                id="_IDGenLabel37"
+                                text="Taxable Amount"
+                            />
+                            <table:template>
+                                <ObjectNumber
+                                    id="_IDGenObjectNumber"
+                                    number="{path: 'mergedData>TaxableAmount', formatter: '.formatCurrencySimple'}"
+                                    unit="{mergedData>TransactionCurrency}"
+                                    emphasized="false"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="taxAmountCol"
+                            width="12rem"
+                            sortProperty="TotalTaxAmount"
+                            hAlign="End"
+                        >
+                            <Label
+                                id="_IDGenLabel38"
+                                text="Tax Amount"
+                            />
+                            <table:template>
+                                <ObjectNumber
+                                    id="_IDGenObjectNumber1"
+                                    number="{path: 'mergedData>TotalTaxAmount', formatter: '.formatCurrencySimple'}"
+                                    unit="{mergedData>TransactionCurrency}"
+                                    state="{= ${mergedData>TotalTaxAmount} > 0 ? 'Success' : 'None'}"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="grandTotalCol"
+                            width="12rem"
+                            sortProperty="GrandTotal"
+                            hAlign="End"
+                        >
+                            <Label
+                                id="_IDGenLabel39"
+                                text="Grand Total"
+                            />
+                            <table:template>
+                                <ObjectNumber
+                                    id="_IDGenObjectNumber3"
+                                    number="{path: 'mergedData>GrandTotal', formatter: '.formatCurrencySimple'}"
+                                    unit="{mergedData>TransactionCurrency}"
+                                    state="Success"
+                                    emphasized="true"
+                                />
+                            </table:template>
+                        </table:Column>
+                        <table:Column
+                            id="actionsCol"
+                            width="8rem"
+                            hAlign="Center"
+                        >
+                            <Label
+                                id="_IDGenLabel40"
+                                text="Details"
+                            />
+                            <table:template>
+                                <Button
+                                    id="_IDGenButton5"
+                                    icon="sap-icon://detail-view"
+                                    tooltip="View all row details"
+                                    press="onViewRowDetails"
+                                    type="Ghost"
+                                    class="sapUiTinyMarginEnd"
+                                />
+                            </table:template>
+                        </table:Column>
+                    </table:columns>
+                </table:Table>
+            </VBox>
+
+            <MessagePage
+                id="noDataMessagePage"
+                visible="{= !${loadingState>/loading} &amp;&amp; ${mergedData>/count} === 0}"
+                text="No GST tax data found"
+                description="No records match your current filter criteria. Please adjust your filters and try again, or use the buttons above to refresh or clear filters."
+                icon="sap-icon://document"
+                class="sapUiMediumMargin"
+            >
+                <customDescription>
+                    <Link
+                        id="clearFiltersMainLink"
+                        text="Clear All Filters and Try Again"
+                        press="onClearFilters"
+                    />
+                </customDescription>
+            </MessagePage>
+        </content>
+    </Page>
+</mvc:View>

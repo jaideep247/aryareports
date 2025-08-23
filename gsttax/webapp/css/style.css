@@ -1,0 +1,103 @@
+/* Enter your custom styles here */
+
+/* Custom styles for GST Tax Report application */
+
+.sapUiResponsiveMargin {
+    margin: 1rem;
+}
+
+.sapUiMediumMargin {
+    margin: 0.5rem;
+}
+
+.sapUiMediumMarginEnd {
+    margin-right: 0.5rem;
+}
+
+.sapUiMediumMarginBottom {
+    margin-bottom: 0.5rem;
+}
+
+.sapUiTinyMarginEnd {
+    margin-right: 0.25rem;
+}
+
+/* Table styling */
+.sapMTable .sapMListTblCell {
+    padding: 0.5rem;
+}
+
+/* Panel styling */
+.sapMPanel .sapMPanelContent {
+    padding: 1rem;
+}
+
+/* Filter panel styling */
+.sapMPanel[data-sap-ui*="filter"] .sapMPanelContent {
+    background-color: #f7f7f7;
+}
+
+/* Detail dialog styling */
+.sapMDialog .sapMDialogContent {
+    padding: 0;
+}
+
+.sapMDialog .sapMScrollContainer {
+    height: 100%;
+}
+
+/* Form styling in detail dialog */
+.sapUiForm .sapMLabel {
+    font-weight: 600;
+    color: #32363a;
+}
+
+/* Responsive table cells */
+@media (max-width: 768px) {
+    .sapMTable .sapMListTblCell {
+        padding: 0.25rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Loading indicator */
+.sapMBusyIndicator {
+    position: relative;
+    margin: 2rem auto;
+}
+
+/* Export button styling */
+.sapMBtn[data-sap-ui*="export"] {
+    background-color: #0a6ed1;
+    border-color: #0a6ed1;
+}
+
+/* Success state for numbers */
+.sapMObjectNumber.sapMObjectNumberStateSuccess {
+    color: #107e3e;
+}
+
+/* Error state for numbers */
+.sapMObjectNumber.sapMObjectNumberStateError {
+    color: #bb0000;
+}
+
+/* Emphasized numbers */
+.sapMObjectNumber.sapMObjectNumberEmphasized {
+    font-weight: 700;
+    font-size: 1.125rem;
+}
+
+/* Filter form layout */
+.sapUiFormResGrid .sapMLabel {
+    padding-top: 0.375rem;
+}
+
+/* Compact mode adjustments */
+.sapUiSizeCompact .sapMTable .sapMListTblCell {
+    padding: 0.25rem 0.5rem;
+}
+
+.sapUiSizeCompact .sapMPanel .sapMPanelContent {
+    padding: 0.5rem;
+}
