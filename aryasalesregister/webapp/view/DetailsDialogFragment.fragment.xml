@@ -7,12 +7,12 @@
     <Dialog
         id="enhancedDetailsDialog"
         title="Sales Record Details"
-        contentWidth="90%"
-        contentHeight="85%"
+        contentWidth="95%"
+        contentHeight="90%"
         resizable="true"
         draggable="true"
-        verticalScrolling="false"
-        horizontalScrolling="false"
+        verticalScrolling="true"
+        horizontalScrolling="true"
     >
         <customHeader>
             <Toolbar id="dialogHeaderToolbar">
@@ -28,7 +28,7 @@
                     tooltip="Refresh Sales Order Text"
                     type="Transparent"
                     press="onRefreshSalesOrderText"
-                    visible="{= ${details>SalesDocument} !== null &amp;&amp; ${details>SalesDocument} !== undefined }"
+                    visible="{= !!${details>SalesDocument} }"
                 />
                 <Button
                     id="exportRecordButton"
@@ -47,43 +47,39 @@
             </Toolbar>
         </customHeader>
 
-        <ScrollContainer
-            id="dialogScrollContainer"
-            height="100%"
-            vertical="true"
-            horizontal="false"
+        <Page 
+            id="dialogPage"
+            showHeader="false"
+            enableScrolling="true"
         >
-            <f:DynamicPage
-                id="dialogDynamicPage"
-                headerExpanded="true"
-                showFooter="false"
-            >
-                <f:title>
-                    <f:DynamicPageTitle id="dialogPageTitle">
-                        <f:heading>
+            <content>
+                <!-- Header Section -->
+                <VBox id="dialogHeaderSection" class="sapUiMediumMargin">
+                    <HBox id="headerMainBox" justifyContent="SpaceBetween" alignItems="Center" class="sapUiMediumMarginBottom">
+                        <VBox id="headerIdentifierBox">
                             <ObjectIdentifier
                                 id="dialogMainIdentifier"
                                 title="{details>BillingDocument}"
                                 text="Sales Document: {details>SalesDocument}"
+                                class="sapUiLargeMarginBottom"
                             />
-                        </f:heading>
-
-                        <f:actions>
+                        </VBox>
+                        <VBox id="headerAmountBox">
                             <ObjectNumber
                                 id="dialogMainAmount"
                                 number="{path: 'details>InvoiceAmount', formatter: '.formatNumber'}"
                                 unit="{details>TransactionCurrency}"
                                 state="Success"
                                 emphasized="true"
+                                class="sapUiLargeMarginBottom"
                             />
-                        </f:actions>
-                    </f:DynamicPageTitle>
-                </f:title>
-
-                <f:content>
+                        </VBox>
+                    </HBox>
+                </VBox>
                     <VBox
                         id="dialogContentVBox"
                         class="sapUiMediumMargin"
+                        width="100%"
                     >
                         <!-- Document Information Panel -->
                         <Panel
@@ -99,6 +95,7 @@
                                     hSpacing="1"
                                     vSpacing="1"
                                     class="sapUiMediumMargin"
+                                    width="100%"
                                 >
                                     <VBox id="billingDocVBox">
                                         <Label
@@ -203,7 +200,7 @@
                                         />
                                         <Text
                                             id="customerNameText"
-                                            text="{details>CustomerFullName_1}"
+                                            text="{details>CustomerDisplay}"
                                             class="sapUiSmallMarginBottom"
                                         />
                                     </VBox>
@@ -215,7 +212,7 @@
                                         />
                                         <Text
                                             id="customerCodeText"
-                                            text="{details>PayerParty_1}"
+                                            text="{details>CustomerNumber}"
                                             class="sapUiSmallMarginBottom"
                                         />
                                     </VBox>
@@ -240,7 +237,7 @@
                                         />
                                         <Text
                                             id="billToPartyText1"
-                                            text="{details>BillToParty}"
+                                            text="{details>CustomerNumber}"
                                             class="sapUiSmallMarginBottom"
                                         />
                                     </VBox>
@@ -295,7 +292,7 @@
                                         />
                                         <Text
                                             id="_IDGenText"
-                                            text="{details>BillingDocumentItemText}"
+                                            text="{details>ProductDescription}"
                                             maxLines="2"
                                             wrapping="true"
                                             class="sapUiSmallMarginBottom"
@@ -303,12 +300,12 @@
                                     </VBox>
                                     <VBox id="quantityVBox">
                                         <Label
-                                            id="quantityLabel"
+                                            id="quantityLabel1"
                                             text="Quantity"
                                             class="sapUiTinyMarginBottom"
                                         />
                                         <ObjectNumber
-                                            id="quantityNumber"
+                                            id="quantityNumber1"
                                             number="{path: 'details>BillingQuantity', formatter: '.formatNumber'}"
                                             unit="{details>BillingQuantityUnit}"
                                             class="sapUiSmallMarginBottom"
@@ -316,7 +313,7 @@
                                     </VBox>
                                     <VBox id="plantVBox">
                                         <Label
-                                            id="plantLabel"
+                                            id="plantLabel1"
                                             text="Plant"
                                             class="sapUiTinyMarginBottom"
                                         />
@@ -340,7 +337,7 @@
                                     </VBox>
                                     <VBox id="profitCenterVBox">
                                         <Label
-                                            id="profitCenterLabel"
+                                            id="profitCenterLabel1"
                                             text="Profit Center"
                                             class="sapUiTinyMarginBottom"
                                         />
@@ -391,7 +388,7 @@
                                         />
                                         <ObjectNumber
                                             id="invoiceAmountObjectNumber"
-                                            number="{= ${TotalNetAmount} + ${ZDV2} + ${JOIG} + ${JOCG} + ${JOSG} + ${ZTCS} + ${ZDV4} - ${DRV1} }"
+                                            number="{= ${details>TotalNetAmount} + ${details>ZDV2} + ${details>JOIG} + ${details>JOCG} + ${details>JOSG} + ${details>ZTCS} + ${details>ZDV4} - ${details>DRV1} }"
                                             state="Success"
                                             emphasized="true"
                                             visible="{= ${filterData>/showConditionDetails} === true }"
@@ -442,7 +439,7 @@
                             id="salesOrderTextPanel"
                             headerText="Warehouse &amp; Contract Information (Sales Order Text)"
                             expandable="true"
-                            expanded="{= ${details>ZXT1} || ${details>ZXT3} || ${details>ZXT4} || ${details>ZXT5} || ${details>ZXT6} || ${details>ZXT7} || ${details>ZXT8} }"
+                            expanded="true"
                             class="sapUiResponsiveMargin"
                         >
                             <content>
@@ -453,7 +450,7 @@
                                     type="Information"
                                     showIcon="true"
                                     class="sapUiMediumMarginBottom"
-                                    visible="{= ${details>ZXT1} || ${details>ZXT3} || ${details>ZXT4} || ${details>ZXT5} || ${details>ZXT6} || ${details>ZXT7} || ${details>ZXT8} }"
+                                    visible="{= !!${details>ZXT1} }"
                                 />
 
                                 <MessageStrip
@@ -462,7 +459,7 @@
                                     type="Warning"
                                     showIcon="true"
                                     class="sapUiMediumMarginBottom"
-                                    visible="{= !${details>ZXT1} &amp;&amp; !${details>ZXT3} &amp;&amp; !${details>ZXT4} &amp;&amp; !${details>ZXT5} &amp;&amp; !${details>ZXT6} &amp;&amp; !${details>ZXT7} &amp;&amp; !${details>ZXT8} }"
+                                    visible="{= !${details>ZXT1} }"
                                 />
 
                                 <l:Grid
@@ -482,13 +479,13 @@
                                         <Text
                                             id="zxt1Text"
                                             text="{details>ZXT1}"
-                                            visible="{= ${details>ZXT1} !== null &amp;&amp; ${details>ZXT1} !== undefined &amp;&amp; ${details>ZXT1} !== '' }"
+                                            visible="{= !!${details>ZXT1} }"
                                             class="sapUiSmallMarginBottom"
                                         />
                                         <Text
                                             id="zxt1NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT1} || ${details>ZXT1} === '' }"
+                                            visible="{= !${details>ZXT1} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -503,13 +500,13 @@
                                         <Text
                                             id="zxt3Text"
                                             text="{details>ZXT3}"
-                                            visible="{= ${details>ZXT3} !== null &amp;&amp; ${details>ZXT3} !== undefined &amp;&amp; ${details>ZXT3} !== '' }"
+                                            visible="{= !!${details>ZXT3} }"
                                             class="sapUiSmallMarginBottom"
                                         />
                                         <Text
                                             id="zxt3NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT3} || ${details>ZXT3} === '' }"
+                                            visible="{= !${details>ZXT3} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -524,7 +521,7 @@
                                         <Text
                                             id="zxt4Text"
                                             text="{details>ZXT4}"
-                                            visible="{= ${details>ZXT4} !== null &amp;&amp; ${details>ZXT4} !== undefined &amp;&amp; ${details>ZXT4} !== '' }"
+                                            visible="{= !!${details>ZXT4} }"
                                             maxLines="3"
                                             wrapping="true"
                                             class="sapUiSmallMarginBottom"
@@ -532,7 +529,7 @@
                                         <Text
                                             id="zxt4NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT4} || ${details>ZXT4} === '' }"
+                                            visible="{= !${details>ZXT4} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -547,13 +544,13 @@
                                         <Text
                                             id="zxt5Text"
                                             text="{details>ZXT5}"
-                                            visible="{= ${details>ZXT5} !== null &amp;&amp; ${details>ZXT5} !== undefined &amp;&amp; ${details>ZXT5} !== '' }"
+                                            visible="{= !!${details>ZXT5} }"
                                             class="sapUiSmallMarginBottom"
                                         />
                                         <Text
                                             id="zxt5NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT5} || ${details>ZXT5} === '' }"
+                                            visible="{= !${details>ZXT5} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -568,7 +565,7 @@
                                         <Text
                                             id="zxt6Text"
                                             text="{details>ZXT6}"
-                                            visible="{= ${details>ZXT6} !== null &amp;&amp; ${details>ZXT6} !== undefined &amp;&amp; ${details>ZXT6} !== '' }"
+                                            visible="{= !!${details>ZXT6} }"
                                             maxLines="4"
                                             wrapping="true"
                                             class="sapUiSmallMarginBottom"
@@ -576,7 +573,7 @@
                                         <Text
                                             id="zxt6NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT6} || ${details>ZXT6} === '' }"
+                                            visible="{= !${details>ZXT6} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -591,13 +588,13 @@
                                         <Text
                                             id="zxt7Text"
                                             text="{details>ZXT7}"
-                                            visible="{= ${details>ZXT7} !== null &amp;&amp; ${details>ZXT7} !== undefined &amp;&amp; ${details>ZXT7} !== '' }"
+                                            visible="{= !!${details>ZXT7} }"
                                             class="sapUiSmallMarginBottom"
                                         />
                                         <Text
                                             id="zxt7NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT7} || ${details>ZXT7} === '' }"
+                                            visible="{= !${details>ZXT7} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -612,13 +609,13 @@
                                         <Text
                                             id="zxt8Text"
                                             text="{details>ZXT8}"
-                                            visible="{= ${details>ZXT8} !== null &amp;&amp; ${details>ZXT8} !== undefined &amp;&amp; ${details>ZXT8} !== '' }"
+                                            visible="{= !!${details>ZXT8} }"
                                             class="sapUiSmallMarginBottom"
                                         />
                                         <Text
                                             id="zxt8NoDataText"
                                             text="Not available"
-                                            visible="{= !${details>ZXT8} || ${details>ZXT8} === '' }"
+                                            visible="{= !${details>ZXT8} }"
                                             class="sapUiSmallMarginBottom sapMText"
                                         />
                                     </VBox>
@@ -698,14 +695,14 @@
                                             />
                                             <ObjectNumber
                                                 id="ppr0ObjectNumber"
-                                                number="{path: 'PPR0', formatter: '.formatNumber'}"
-                                                state="{path: 'PPR0', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>PPR0', formatter: '.formatNumber'}"
+                                                state="{path: 'details>PPR0', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>PPR0} }"
                                             />
                                             <Text
                                                 id="ppr0NoDataText"
                                                 text="Not applicable"
-                                                visible="{= !${details>PPR0} || ${details>PPR0} === '0' }"
+                                                visible="{= !${details>PPR0} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -720,14 +717,14 @@
 
                                             <ObjectNumber
                                                 id="zdv2ObjectNumber"
-                                                number="{path: 'ZDV2', formatter: '.formatNumber'}"
-                                                state="{path: 'ZDV2', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>ZDV2', formatter: '.formatNumber'}"
+                                                state="{path: 'details>ZDV2', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>ZDV2} }"
                                             />
                                             <Text
                                                 id="zdv2NoDataText"
                                                 text="No additional charges"
-                                                visible="{= !${details>ZDV2} || ${details>ZDV2} === '0' }"
+                                                visible="{= !${details>ZDV2} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -741,14 +738,14 @@
                                             />
                                             <ObjectNumber
                                                 id="joigObjectNumber"
-                                                number="{path: 'JOIG', formatter: '.formatNumber'}"
-                                                state="{path: 'JOIG', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>JOIG', formatter: '.formatNumber'}"
+                                                state="{path: 'details>JOIG', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>JOIG} }"
                                             />
                                             <Text
                                                 id="joigNoDataText"
                                                 text="No IGST"
-                                                visible="{= !${details>JOIG} || ${details>JOIG} === '0' }"
+                                                visible="{= !${details>JOIG} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -763,14 +760,14 @@
 
                                             <ObjectNumber
                                                 id="jocgObjectNumber"
-                                                number="{path: 'JOCG', formatter: '.formatNumber'}"
-                                                state="{path: 'JOCG', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>JOCG', formatter: '.formatNumber'}"
+                                                state="{path: 'details>JOCG', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>JOCG} }"
                                             />
                                             <Text
                                                 id="jocgNoDataText"
                                                 text="No CGST"
-                                                visible="{= !${details>JOCG} || ${details>JOCG} === '0' }"
+                                                visible="{= !${details>JOCG} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -785,14 +782,14 @@
 
                                             <ObjectNumber
                                                 id="josgObjectNumber"
-                                                number="{path: 'JOSG', formatter: '.formatNumber'}"
-                                                state="{path: 'JOSG', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>JOSG', formatter: '.formatNumber'}"
+                                                state="{path: 'details>JOSG', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>JOSG} }"
                                             />
                                             <Text
                                                 id="josgNoDataText"
                                                 text="No SGST"
-                                                visible="{= !${details>JOSG} || ${details>JOSG} === '0' }"
+                                                visible="{= !${details>JOSG} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -806,15 +803,15 @@
                                             />
                                             <ObjectNumber
                                                 id="drv1ObjectNumber"
-                                                number="{path: 'DRV1', formatter: '.formatNumber'}"
+                                                number="{path: 'details>DRV1', formatter: '.formatNumber'}"
                                                 state="Error"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                visible="{= !!${details>DRV1} }"
                                             />
 
                                             <Text
                                                 id="drv1NoDataText"
                                                 text="No discount applied"
-                                                visible="{= !${details>DRV1} || ${details>DRV1} === '0' }"
+                                                visible="{= !${details>DRV1} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -829,14 +826,14 @@
 
                                             <ObjectNumber
                                                 id="ztcsObjectNumber"
-                                                number="{path: 'ZTCS', formatter: '.formatNumber'}"
-                                                state="{path: 'ZTCS', formatter: '.formatConditionState'}"
-                                                visible="{= ${filterData>/showConditionDetails} === true }"
+                                                number="{path: 'details>ZTCS', formatter: '.formatNumber'}"
+                                                state="{path: 'details>ZTCS', formatter: '.formatConditionState'}"
+                                                visible="{= !!${details>ZTCS} }"
                                             />
                                             <Text
                                                 id="ztcsNoDataText"
                                                 text="No TCS"
-                                                visible="{= !${details>ZTCS} || ${details>ZTCS} === '0' }"
+                                                visible="{= !${details>ZTCS} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -853,13 +850,13 @@
                                                 number="{path: 'details>ZDV4', formatter: '.formatNumber'}"
                                                 unit="{details>TransactionCurrency}"
                                                 state="Warning"
-                                                visible="{= ${details>ZDV4} !== null &amp;&amp; ${details>ZDV4} !== undefined &amp;&amp; ${details>ZDV4} !== '0' }"
+                                                visible="{= !!${details>ZDV4} }"
                                                 class="sapUiSmallMarginBottom"
                                             />
                                             <Text
                                                 id="zdv4NoDataText"
                                                 text="No delay charges"
-                                                visible="{= !${details>ZDV4} || ${details>ZDV4} === '0' }"
+                                                visible="{= !${details>ZDV4} }"
                                                 class="sapUiSmallMarginBottom sapMText"
                                             />
                                         </VBox>
@@ -939,9 +936,8 @@
                             </content>
                         </Panel>
                     </VBox>
-                </f:content>
-            </f:DynamicPage>
-        </ScrollContainer>
+            </content>
+        </Page>
 
         <beginButton>
             <Button

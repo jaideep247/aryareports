@@ -31,6 +31,7 @@ sap.ui.define([
             console.log("🚀 Sales Register Controller initializing...");
             this._initializeModels();
             this._validateConfiguration();
+            this._loadColumnSettings();
             console.log("✅ Controller initialized successfully");
         },
 
@@ -49,7 +50,6 @@ sap.ui.define([
         // --- Model Management & Initialization ---
         /**
          * Initializes the JSON models used by the view.
-         * Similar to GST Tax Report but adapted for Sales Register data structure
          */
         _initializeModels: function () {
             var salesDataModel = new JSONModel({
@@ -58,7 +58,8 @@ sap.ui.define([
                 totalCount: 0,
                 originalRecordCount: 0,
                 totalAmount: 0,
-                lastLoadTime: null
+                lastLoadTime: null,
+                recordsWithTextData: 0
             });
             this.getView().setModel(salesDataModel, "salesData");
 
@@ -70,7 +71,8 @@ sap.ui.define([
                 toDate: null,
                 pagingTop: 500,
                 groupingMethod: "salesDocAndItems",
-                autoRefresh: false
+                autoRefresh: false,
+                showConditionDetails: true
             });
             this.getView().setModel(filterDataModel, "filterData");
 
@@ -202,6 +204,14 @@ sap.ui.define([
             console.groupEnd();
         },
 
+        // --- Event Handlers ---
+        /**
+         * Handles the "Load Data" button press
+         */
+        onLoadData: function () {
+            this._loadData();
+        },
+
         // --- Data Loading & Processing ---
         /**
          * The main method for loading data. Orchestrates the process of loading sales data,
@@ -231,7 +241,10 @@ sap.ui.define([
                 this.getView().getModel("salesData").setData({
                     results: [],
                     count: 0,
-                    totalAmount: 0
+                    totalCount: 0,
+                    originalRecordCount: 0,
+                    totalAmount: 0,
+                    recordsWithTextData: 0
                 });
                 this.getView().getModel("pagination").setData({
                     hasMore: false,
@@ -244,6 +257,8 @@ sap.ui.define([
 
             var currentSkip = skip || 0;
             var pageSize = filterData.pagingTop || 500;
+
+            console.log(`📊 Loading data: skip=${currentSkip}, pageSize=${pageSize}, isLoadMore=${isLoadMore}`);
 
             this._loadSalesDataWithFilters(currentSkip, pageSize)
                 .then(salesResult => this._processSalesResult(salesResult, isLoadMore))
@@ -267,6 +282,10 @@ sap.ui.define([
                 var urlParameters = this._buildSalesUrlParameters(skip, top);
                 var path = "/YY1_SALESREGISTER";
 
+                console.log(`🔗 Loading from: ${path}`);
+                console.log(`📋 URL Parameters:`, urlParameters);
+                console.log(`🔍 Filters:`, filters.length, "active filters");
+
                 salesModel.read(path, {
                     filters: filters,
                     urlParameters: urlParameters,
@@ -274,10 +293,16 @@ sap.ui.define([
                         var results = data.results || [];
                         results.totalCount = data.__count;
                         results.hasNext = !!data.__next;
+                        results.skip = skip;
+                        results.top = top;
+                        
+                        console.log(`✅ Data loaded: ${results.length} records, total count: ${data.__count}, skip: ${skip}`);
+                        
                         resolve(results);
                     },
                     error: error => {
                         var errorMessage = this._buildErrorMessage("Sales Data", error);
+                        console.error("❌ Sales data load error:", error);
                         reject(new Error(errorMessage));
                     }
                 });
@@ -297,6 +322,9 @@ sap.ui.define([
             }
 
             this._setLoading(true, `Processing ${salesResult.length} sales records...`, 2, 4);
+
+            // Store original record count
+            var originalRecordCount = salesResult.length;
 
             // Automatically load sales order text data for all fetched sales orders
             var enhancedDataWithText = salesResult;
@@ -319,6 +347,12 @@ sap.ui.define([
             // Group data by Sales Document & Item with enhanced text data
             this._setLoading(true, "Grouping with text data and calculating totals...", 4, 4);
             var groupedData = this._groupSalesDataByDocumentAndItem(enhancedDataWithText);
+
+            // Set original record count in model
+            if (!isLoadMore) {
+                this.getView().getModel("salesData").setProperty("/originalRecordCount", originalRecordCount);
+            }
+
             this._finishDataLoad(groupedData, isLoadMore, salesResult.totalCount);
 
             return Promise.resolve();
@@ -327,7 +361,7 @@ sap.ui.define([
         /**
          * Groups sales data by Sales Document and Item, calculating invoice amounts
          * This is different from GST grouping - it groups by Sales Document + Item combination
-         * @param {Object[]} salesData - The raw sales data
+         * @param {Object[]} salesData - The raw sales data with enhanced text data
          * @returns {Object[]} Array of grouped sales summaries
          */
         _groupSalesDataByDocumentAndItem: function (salesData) {
@@ -339,29 +373,41 @@ sap.ui.define([
                 var groupKey = `${item.SalesDocument || 'N/A'}_${item.SalesDocumentItem || '000010'}`;
 
                 if (!groupedData[groupKey]) {
-                    // Initialize document group
+                    // Initialize document group with enhanced data
                     groupedData[groupKey] = {
                         // Document identifiers
                         BillingDocument: item.BillingDocument,
                         SalesDocument: item.SalesDocument,
                         SalesDocumentItem: item.SalesDocumentItem,
                         BillingDocumentDate: item.BillingDocumentDate,
+                        BillingDocumentType: item.BillingDocumentType,
 
                         // Customer information
                         CustomerNumber: item.PayerParty,
                         CustomerDisplay: item.CustomerFullName_1,
                         CustomerState: item.Region,
                         CustomerGSTIN: item.BusinessPartnerName1,
+                        CustomerPaymentTerms: item.CustomerPaymentTerms,
 
                         // Product information
                         Product: item.Product,
                         ProductDescription: item.BillingDocumentItemText,
+                        BillingDocumentItemText: item.BillingDocumentItemText, // Keep both for compatibility
                         Plant: item.Plant,
                         BillingQuantity: this._parseQuantity(item.BillingQuantity),
                         BillingQuantityUnit: item.BillingQuantityUnit,
 
-                        // Currency
+                        // Currency and additional fields
                         TransactionCurrency: item.TransactionCurrency,
+                        Division: item.Division,
+                        TaxCode: item.TaxCode,
+                        ProfitCenter: item.ProfitCenter,
+
+                        // Due Date calculation (approximation - you may need to adjust this based on payment terms)
+                        NetDueDate: this._calculateDueDate(item.BillingDocumentDate, item.CustomerPaymentTerms),
+
+                        // Customer Type (derive from available data or set default)
+                        CustomerType: this._deriveCustomerType(item),
 
                         // Initialize condition amounts
                         PPR0: 0,     // Rate/MT
@@ -381,7 +427,7 @@ sap.ui.define([
                         IN_EDocEWbillStatus: item.IN_EDocEWbillStatus,
                         IN_EDocEInvcEWbillNmbr: item.IN_EDocEInvcEWbillNmbr,
 
-                        // Sales order text fields
+                        // Sales order text fields (from auto-fetch)
                         ZXT1: item.ZXT1,  // Warehouse Code
                         ZXT3: item.ZXT3,  // Warehouse Location
                         ZXT4: item.ZXT4,  // Contract/Trade ID
@@ -446,6 +492,51 @@ sap.ui.define([
             return groupedArray;
         },
 
+        /**
+         * Calculate due date based on billing date and payment terms
+         * @param {Date} billingDate - The billing document date
+         * @param {string} paymentTerms - Payment terms code (e.g., "NT90", "NT30")
+         * @returns {Date} Calculated due date
+         */
+        _calculateDueDate: function (billingDate, paymentTerms) {
+            if (!billingDate) return null;
+
+            var baseDate = new Date(billingDate);
+            var days = 0;
+
+            // Extract days from payment terms (simple parsing)
+            if (paymentTerms) {
+                var matches = paymentTerms.match(/\d+/);
+                if (matches) {
+                    days = parseInt(matches[0], 10);
+                }
+            }
+
+            // Default to 30 days if no payment terms found
+            if (days === 0) {
+                days = 30;
+            }
+
+            var dueDate = new Date(baseDate);
+            dueDate.setDate(dueDate.getDate() + days);
+
+            return dueDate;
+        },
+
+        /**
+         * Derive customer type from available data
+         * @param {Object} item - Sales data item
+         * @returns {string} Customer type ("B2B", "B2C", or "Unknown")
+         */
+        _deriveCustomerType: function (item) {
+            // Simple logic - you may need to adjust based on your business rules
+            if (item.BusinessPartnerName1 && item.BusinessPartnerName1.trim()) {
+                // If GSTIN is present, likely B2B
+                return "B2B";
+            }
+            return "B2C"; // Default assumption
+        },
+
         // --- Filter & URL Parameter Builders ---
         /**
          * Builds the OData filter array for the Sales Register service
@@ -492,9 +583,14 @@ sap.ui.define([
                 $orderby: "SalesDocument asc,SalesDocumentItem asc,BillingDocument asc",
                 $inlinecount: "allpages"
             };
+            
+            // Always add skip parameter if it's greater than 0
             if (skip > 0) {
                 params["$skip"] = skip;
+                console.log(`📊 Adding skip parameter: ${skip}`);
             }
+            
+            console.log(`📋 Built URL parameters:`, params);
             return params;
         },
 
@@ -507,10 +603,10 @@ sap.ui.define([
                 "Product,BillingDocumentItemText,BillingQuantity,BillingQuantityUnit,ConditionType," +
                 "ConditionAmount,TransactionCurrency,CustomerFullName_1,BusinessPartnerName1,PayerParty," +
                 "Region,Plant,Division,ProfitCenter,TaxCode,CustomerPaymentTerms," +
-                "IN_EDocEWbillStatus,IN_EDocEInvcEWbillNmbr,PurchaseOrderByShipToParty";
+                "IN_EDocEWbillStatus,IN_EDocEInvcEWbillNmbr";
         },
 
-        // --- Quick Date Filter Methods (Fixed Syntax Error) ---
+        // --- Quick Date Filter Methods ---
         /**
          * Consolidated quick filter method for different time periods
          * @param {string} period - "currentMonth", "currentQuarter", "currentYear", "lastMonth"
@@ -538,7 +634,7 @@ sap.ui.define([
 
                 case "lastMonth":
                     firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    lastDay = new Date(today.getFullYear(), today.getMonth(), 0); // FIXED: was "New" instead of "new"
+                    lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
                     break;
 
                 default:
@@ -576,26 +672,6 @@ sap.ui.define([
             this.onQuickFilterTimePeriod("lastMonth");
         },
 
-        // --- Event Handlers ---
-        /**
-         * Handles the "Load Data" button press
-         */
-        onLoadData: function () {
-            var filterData = this.getView().getModel("filterData").getData();
-            if (!this._hasActiveFilters(filterData)) {
-                MessageBox.confirm("No filters specified. This may load a large amount of data. Continue?", {
-                    title: "Confirm Load",
-                    onClose: action => {
-                        if (action === MessageBox.Action.OK) {
-                            this._loadData(false, 0);
-                        }
-                    }
-                });
-            } else {
-                this._loadData(false, 0);
-            }
-        },
-
         /**
          * Clears all filters and loaded data
          */
@@ -616,14 +692,15 @@ sap.ui.define([
                 count: 0,
                 totalCount: 0,
                 originalRecordCount: 0,
-                totalAmount: 0
+                totalAmount: 0,
+                recordsWithTextData: 0
             });
 
             MessageToast.show("Filters cleared");
         },
 
         /**
-         * Handles the "Test Connection" button press with enhanced sales order API testing
+         * Handles the "Test Connection" button press
          */
         onTestConnection: function () {
             console.group("🔬 Testing Sales Register Service Connection");
@@ -673,9 +750,6 @@ sap.ui.define([
 
         /**
          * Tests the Sales Order API connection using a sample sales order
-         * @param {string} sampleSalesOrder - Sample sales order number
-         * @param {string} sampleItem - Sample sales order item
-         * @param {string} mainMessage - Main success message from sales register test
          */
         _testSalesOrderAPIConnection: function (sampleSalesOrder, sampleItem, mainMessage) {
             console.log("🔄 Testing Sales Order API connection...");
@@ -713,7 +787,7 @@ sap.ui.define([
         },
 
         /**
-         * Handles the "Load More" button press
+         * Handles the "Load More" button press with improved duplicate handling
          */
         onLoadMoreData: function () {
             var paginationData = this.getView().getModel("pagination").getData();
@@ -721,7 +795,71 @@ sap.ui.define([
                 MessageToast.show("No more data to load");
                 return;
             }
-            this._loadData(true, paginationData.currentSkip);
+
+            // Use the pagination model's currentSkip value for proper pagination
+            var nextSkip = paginationData.currentSkip;
+            
+            console.log(`🔄 Loading more data: skip=${nextSkip}, current records=${paginationData.loadedRecords}, total=${paginationData.totalRecords}`);
+
+            this._loadData(true, nextSkip);
+        },
+        /**
+         * Shows current pagination status for debugging
+         */
+        onShowPaginationStatus: function () {
+            var paginationData = this.getView().getModel("pagination").getData();
+            var salesData = this.getView().getModel("salesData").getData();
+            
+            var statusText = `PAGINATION STATUS\n\n` +
+                `📊 Current State:\n` +
+                `• Has More: ${paginationData.hasMore}\n` +
+                `• Current Skip: ${paginationData.currentSkip}\n` +
+                `• Page Size: ${paginationData.pageSize}\n` +
+                `• Total Records: ${paginationData.totalRecords}\n` +
+                `• Loaded Records: ${paginationData.loadedRecords}\n` +
+                `• Displayed Results: ${salesData.results ? salesData.results.length : 0}\n\n` +
+                
+                `🔍 Next Load Info:\n` +
+                `• Next Skip Value: ${paginationData.currentSkip}\n` +
+                `• Remaining Records: ${paginationData.totalRecords - paginationData.loadedRecords}\n` +
+                `• Can Load More: ${paginationData.hasMore ? 'Yes' : 'No'}`;
+
+            MessageBox.information(statusText, {
+                title: "Pagination Status",
+                styleClass: "sapUiSizeCompact"
+            });
+        },
+
+        /**
+         * Shows current table data state for debugging
+         */
+        onShowTableDataState: function () {
+            var salesData = this.getView().getModel("salesData").getData();
+            var paginationData = this.getView().getModel("pagination").getData();
+            
+            var statusText = `TABLE DATA STATE\n\n` +
+                `📊 Sales Data Model:\n` +
+                `• Total Results: ${salesData.results ? salesData.results.length : 0}\n` +
+                `• Original Record Count: ${salesData.originalRecordCount || 0}\n` +
+                `• Total Count: ${salesData.totalCount || 0}\n` +
+                `• Total Amount: ${this.formatNumber((salesData.totalAmount || 0).toString())}\n` +
+                `• Records with Text: ${salesData.recordsWithTextData || 0}\n\n` +
+                
+                `📊 Pagination Model:\n` +
+                `• Has More: ${paginationData.hasMore}\n` +
+                `• Current Skip: ${paginationData.currentSkip}\n` +
+                `• Loaded Records: ${paginationData.loadedRecords}\n` +
+                `• Total Records: ${paginationData.totalRecords}\n\n` +
+                
+                `🔍 Table Binding:\n` +
+                `• Table ID: salesTable\n` +
+                `• Binding Path: /results\n` +
+                `• Model: salesData`;
+
+            MessageBox.information(statusText, {
+                title: "Table Data State",
+                styleClass: "sapUiSizeCompact"
+            });
         },
 
         /**
@@ -743,6 +881,11 @@ sap.ui.define([
             var uniqueSalesDocuments = new Set(data.results.map(item => item.SalesDocument)).size;
             var uniqueBillingDocuments = new Set(data.results.map(item => item.BillingDocument)).size;
             var uniqueCustomers = new Set(data.results.map(item => item.CustomerNumber).filter(Boolean)).size;
+
+            // Customer Type statistics
+            var b2bCustomers = data.results.filter(item => item.CustomerType === 'B2B').length;
+            var b2cCustomers = data.results.filter(item => item.CustomerType === 'B2C').length;
+            var b2bPercentage = documentGroups > 0 ? Math.round((b2bCustomers / documentGroups) * 100) : 0;
 
             // Enhanced text data statistics
             var recordsWithTextData = data.recordsWithTextData || 0;
@@ -767,6 +910,10 @@ sap.ui.define([
                 `• Unique Billing Documents: ${uniqueBillingDocuments}\n` +
                 `• Unique Customers: ${uniqueCustomers}\n\n` +
 
+                `👥 CUSTOMER TYPE BREAKDOWN:\n` +
+                `• B2B Customers: ${b2bCustomers} (${b2bPercentage}%)\n` +
+                `• B2C Customers: ${b2cCustomers} (${100 - b2bPercentage}%)\n\n` +
+
                 `💰 FINANCIAL TOTALS:\n` +
                 `• Total Net Amount: ${this.formatNumber(totalNetAmount.toString())}\n` +
                 `• Total Discount: ${this.formatNumber(totalDiscount.toString())}\n` +
@@ -789,6 +936,47 @@ sap.ui.define([
                 title: "Sales Register Summary with Text Data",
                 styleClass: "sapUiSizeCompact"
             });
+        },
+
+        /**
+         * Handles the "Load All" button press to load all remaining data
+         */
+        onLoadAllData: function () {
+            var paginationData = this.getView().getModel("pagination").getData();
+            if (!paginationData.hasMore) {
+                MessageToast.show("No more data to load");
+                return;
+            }
+
+            MessageBox.confirm("This will load all remaining data. Continue?", {
+                title: "Load All Data",
+                onClose: action => {
+                    if (action === MessageBox.Action.OK) {
+                        this._loadAllRemainingData();
+                    }
+                }
+            });
+        },
+
+        /**
+         * Sets the pagingTop to load all remaining records and triggers a data load.
+         */
+        _loadAllRemainingData: function () {
+            var paginationData = this.getView().getModel("pagination").getData();
+            var remainingRecords = paginationData.totalRecords - paginationData.loadedRecords;
+            if (remainingRecords > 0) {
+                // Temporarily increase the page size to load all remaining records
+                var currentPageSize = this.getView().getModel("filterData").getProperty("/pagingTop");
+                this.getView().getModel("filterData").setProperty("/pagingTop", remainingRecords);
+                
+                // Load the data
+                this._loadData(true, paginationData.loadedRecords);
+                
+                // Reset the page size back to original
+                setTimeout(() => {
+                    this.getView().getModel("filterData").setProperty("/pagingTop", currentPageSize);
+                }, 1000);
+            }
         },
 
         /**
@@ -819,21 +1007,6 @@ sap.ui.define([
         },
 
         /**
-         * Handles the "Toggle Column" button press
-         */
-        onToggleColumn: function (event) {
-            var button = event.getSource();
-            var columnId = button.data("columnId");
-            var column = this.byId(columnId);
-            if (column) {
-                var isVisible = column.getVisible();
-                column.setVisible(!isVisible);
-                button.setIcon(isVisible ? "sap-icon://decline" : "sap-icon://accept");
-                MessageToast.show(isVisible ? "Column hidden" : "Column shown");
-            }
-        },
-
-        /**
          * Handles the "Quick Sort" button press
          */
         onQuickSort: function (event) {
@@ -854,10 +1027,16 @@ sap.ui.define([
          * Opens row details dialog
          */
         onViewRowDetails: function (event) {
+            console.log("🔍 View row details button clicked");
+            
             var bindingContext = event.getSource().getBindingContext("salesData");
             if (bindingContext) {
                 var record = bindingContext.getObject();
+                console.log("📋 Record data for details:", record);
                 this._showRowDetailsDialog(record);
+            } else {
+                console.error("❌ No binding context found for details");
+                MessageBox.error("No record data available for details");
             }
         },
 
@@ -883,6 +1062,65 @@ sap.ui.define([
                 MessageToast.show(`Sales Document: ${record.SalesDocument}`);
                 // Add navigation logic here if needed
             }
+        },
+
+        // --- Column Visibility Management ---
+        /**
+         * Column Visibility Management
+         */
+        onToggleColumn: function (oEvent) {
+            // Get the column ID from the custom data
+            var sColumnId = oEvent.getSource().data("columnId");
+            var oColumn = this.byId(sColumnId);
+
+            if (oColumn) {
+                // Toggle visibility
+                var bVisible = !oColumn.getVisible();
+                oColumn.setVisible(bVisible);
+
+                // Update the icon in the menu item
+                var sIcon = bVisible ? "sap-icon://accept" : "sap-icon://decline";
+                oEvent.getSource().setIcon(sIcon);
+
+                // Save column visibility settings to user preferences
+                this._saveColumnSettings();
+            }
+        },
+
+        onSelectAllColumns: function () {
+            this._setAllColumnsVisibility(true);
+        },
+
+        onDeselectAllColumns: function () {
+            // Keep at least one column visible
+            this._setAllColumnsVisibility(false, true);
+        },
+
+        onResetDefaultColumns: function () {
+            // Define your default visible columns
+            var aDefaultVisibleColumns = [
+                "docDateCol", "billingDocCol", "salesDocCol", "customerNameCol",
+                "materialCol", "netAmountCol", "discountCol", "invoiceAmountCol", "actionsCol"
+            ];
+
+            // Set visibility based on default configuration
+            var oTable = this.byId("salesTable");
+            var aColumns = oTable.getColumns();
+
+            aColumns.forEach(function (oColumn) {
+                var sColumnId = oColumn.getId().replace(this.createId(""), "");
+                var bVisible = aDefaultVisibleColumns.indexOf(sColumnId) !== -1;
+                oColumn.setVisible(bVisible);
+
+                // Update the icon in the menu item
+                var oMenuItem = this._findMenuItemByColumnId(sColumnId);
+                if (oMenuItem) {
+                    oMenuItem.setIcon(bVisible ? "sap-icon://accept" : "sap-icon://decline");
+                }
+            }.bind(this));
+
+            // Save column visibility settings to user preferences
+            this._saveColumnSettings();
         },
 
         // --- Export Functionality ---
@@ -981,10 +1219,6 @@ sap.ui.define([
                 property: "BillingDocumentDate",
                 type: "date"
             }, {
-                label: "Arya DTR Invoice No.",
-                property: "CustomerReference",
-                type: "string"
-            }, {
                 label: "SAP Invoice No.",
                 property: "BillingDocument",
                 type: "string"
@@ -1025,12 +1259,16 @@ sap.ui.define([
                 property: "CustomerNumber",
                 type: "string"
             }, {
+                label: "Customer Type",
+                property: "CustomerType",
+                type: "string"
+            }, {
                 label: "Material Code",
                 property: "Product",
                 type: "string"
             }, {
                 label: "Material Description",
-                property: "ProductDescription",
+                property: "BillingDocumentItemText",
                 type: "string"
             }, {
                 label: "Taxable Amount",
@@ -1096,99 +1334,6 @@ sap.ui.define([
                 label: "Currency",
                 property: "TransactionCurrency",
                 type: "string"
-
-            }, {
-                label: "TIN",
-                property: "CustomerGSTIN",
-                type: "string"
-            }, {
-                label: "Product",
-                property: "Product",
-                type: "string"
-            }, {
-                label: "Product Description",
-                property: "ProductDescription",
-                type: "string"
-            }, {
-                label: "Plant",
-                property: "Plant",
-                type: "string"
-            }, {
-                label: "Billing Quantity",
-                property: "BillingQuantity",
-                type: "number"
-            }, {
-                label: "Quantity Unit",
-                property: "BillingQuantityUnit",
-                type: "string"
-            }, {
-                label: "Net Amount",
-                property: "TotalNetAmount",
-                type: "number"
-            }, {
-                label: "Discount",
-                property: "DRV1",
-                type: "number"
-            }, {
-                label: "Additional Charges",
-                property: "ZDV2",
-                type: "number"
-            }, {
-                label: "IGST",
-                property: "JOIG",
-                type: "number"
-            }, {
-                label: "CGST",
-                property: "JOCG",
-                type: "number"
-            }, {
-                label: "SGST",
-                property: "JOSG",
-                type: "number"
-            }, {
-                label: "TCS",
-                property: "ZTCS",
-                type: "number"
-            }, {
-                label: "Delay Charges",
-                property: "ZDV4",
-                type: "number"
-            }, {
-                label: "Invoice Amount",
-                property: "InvoiceAmount",
-                type: "number"
-            }, {
-                label: "Currency",
-                property: "TransactionCurrency",
-                type: "string"
-            }, {
-                label: "E-Invoice Status",
-                property: "IN_EDocEWbillStatus",
-                type: "string"
-            }, {
-                label: "E-Way Bill Number",
-                property: "IN_EDocEInvcEWbillNmbr",
-                type: "string"
-            }, {
-                label: "Warehouse Code",
-                property: "ZXT1",
-                type: "string"
-            }, {
-                label: "Warehouse Location",
-                property: "ZXT3",
-                type: "string"
-            }, {
-                label: "Contract/Trade ID",
-                property: "ZXT4",
-                type: "string"
-            }, {
-                label: "Service Period",
-                property: "ZXT5",
-                type: "string"
-            }, {
-                label: "Material Description",
-                property: "ZXT6",
-                type: "string"
             }];
         },
 
@@ -1197,27 +1342,279 @@ sap.ui.define([
          * Shows row details dialog
          */
         _showRowDetailsDialog: async function (record) {
-            if (!this._oRowDetailsDialog) {
-                this._oRowDetailsDialog = await Fragment.load({
-                    id: this.getView().getId(),
-                    name: "aryasalesregister.view.fragments.RowDetailsDialog",
-                    controller: this
-                });
-                this.getView().addDependent(this._oRowDetailsDialog);
-            }
+            try {
+                if (!this._oRowDetailsDialog) {
+                    console.log("🔄 Loading details dialog fragment...");
+                    
+                    this._oRowDetailsDialog = await Fragment.load({
+                        id: this.getView().getId(),
+                        name: "aryasalesregister.view.DetailsDialogFragment",
+                        controller: this
+                    });
+                    
+                    if (!this._oRowDetailsDialog) {
+                        throw new Error("Failed to load details dialog fragment");
+                    }
+                    
+                    this.getView().addDependent(this._oRowDetailsDialog);
+                    console.log("✅ Details dialog fragment loaded successfully");
+                }
 
-            var detailModel = new JSONModel({ details: record });
-            this._oRowDetailsDialog.setModel(detailModel, "details");
-            this._oRowDetailsDialog.open();
+                if (!record) {
+                    MessageBox.error("No record data available for details");
+                    return;
+                }
+
+                console.log("📋 Setting details data:", record);
+                
+                // Create a stable model with frozen data to prevent binding flickering
+                var stableRecord = JSON.parse(JSON.stringify(record)); // Deep clone to prevent reference issues
+                var detailModel = new JSONModel(stableRecord);
+                
+                // Set the model before opening the dialog to ensure stable bindings
+                this._oRowDetailsDialog.setModel(detailModel, "details");
+                
+                // Create a stable filterData model for the dialog
+                var stableFilterData = {
+                    showConditionDetails: true,
+                    // Add any other needed filter properties with stable values
+                    dialogMode: true
+                };
+                var dialogFilterModel = new JSONModel(stableFilterData);
+                this._oRowDetailsDialog.setModel(dialogFilterModel, "filterData");
+                console.log("🔗 Stable FilterData model set on dialog");
+                
+                // Debug: Check what models are available on the dialog
+                console.log("🔍 Details model data:", detailModel.getData());
+                console.log("🔍 FilterData model available:", !!this._oRowDetailsDialog.getModel("filterData"));
+                
+                // Open dialog immediately after model is set to prevent flickering
+                if (this._oRowDetailsDialog && !this._oRowDetailsDialog.isOpen()) {
+                    this._oRowDetailsDialog.open();
+                    console.log("✅ Details dialog opened successfully");
+                } else {
+                    console.log("⚠️ Dialog is already open or not available");
+                }
+                
+            } catch (error) {
+                console.error("❌ Failed to show details dialog:", error);
+                MessageBox.error("Failed to open details dialog: " + error.message);
+            }
         },
 
         /**
          * Closes row details dialog
          */
         onCloseRowDetailsDialog: function () {
-            if (this._oRowDetailsDialog) {
+            if (this._oRowDetailsDialog && this._oRowDetailsDialog.isOpen()) {
                 this._oRowDetailsDialog.close();
             }
+        },
+
+        /**
+         * Closes details dialog (for compatibility with fragment)
+         */
+        onCloseDetailsDialog: function () {
+            if (this._oRowDetailsDialog && this._oRowDetailsDialog.isOpen()) {
+                this._oRowDetailsDialog.close();
+            }
+        },
+
+        /**
+         * Handles the "Refresh Sales Order Text" button press in details dialog
+         */
+        onRefreshSalesOrderText: function () {
+            var detailModel = this._oRowDetailsDialog.getModel("details");
+            if (!detailModel) {
+                MessageToast.show("No record data available for refresh");
+                return;
+            }
+
+            var record = detailModel.getData();
+            if (!record.SalesDocument) {
+                MessageToast.show("No sales document available for text refresh");
+                return;
+            }
+
+            MessageToast.show("Refreshing sales order text data...");
+            
+            // Call the text service to refresh data for this specific record
+            if (this.salesOrderTextService) {
+                this.salesOrderTextService._loadTextDataForSingleOrder(record.SalesDocument, record.SalesDocumentItem || "000010")
+                    .then(textData => {
+                        // Update the record with new text data
+                        Object.assign(record, textData);
+                        
+                        // Update the model to refresh the UI
+                        detailModel.refresh(true);
+                        
+                        MessageToast.show("Sales order text data refreshed successfully");
+                    })
+                    .catch(error => {
+                        console.error("Failed to refresh text data:", error);
+                        MessageBox.error("Failed to refresh text data: " + error.message);
+                    });
+            } else {
+                MessageBox.warning("Sales Order Text Service not available");
+            }
+        },
+
+        /**
+         * Handles the "Export Single Record" button press in details dialog
+         */
+        onExportSingleRecord: function () {
+            var detailModel = this._oRowDetailsDialog.getModel("details");
+            if (!detailModel) {
+                MessageBox.warning("No record data available for export");
+                return;
+            }
+
+            var record = detailModel.getData();
+            if (!record) {
+                MessageBox.warning("No record data available for export");
+                return;
+            }
+
+            try {
+                // Create export data for this single record
+                var exportData = [record];
+                var columns = this._createExportColumns();
+                var fileName = `Sales_Record_${record.BillingDocument || 'Unknown'}_${new Date().toISOString().split("T")[0]}.xlsx`;
+                
+                var exportSettings = {
+                    workbook: {
+                        columns: columns,
+                        context: {
+                            title: `Sales Record - ${record.BillingDocument}`,
+                            sheetName: "Record Details"
+                        }
+                    },
+                    dataSource: exportData,
+                    fileName: fileName
+                };
+
+                var spreadsheet = new Spreadsheet(exportSettings);
+                spreadsheet.build()
+                    .then(() => {
+                        MessageToast.show(`Record exported successfully: ${fileName}`);
+                    })
+                    .catch(error => {
+                        MessageBox.error("Export failed: " + error.message);
+                    })
+                    .finally(() => {
+                        spreadsheet.destroy();
+                    });
+            } catch (error) {
+                MessageBox.error("Export functionality not available: " + error.message);
+            }
+        },
+
+        /**
+         * Helper Methods for Column Management
+         */
+        _setAllColumnsVisibility: function (bVisible, bKeepOne) {
+            var oTable = this.byId("salesTable");
+            var aColumns = oTable.getColumns();
+
+            aColumns.forEach(function (oColumn, iIndex) {
+                // If bKeepOne is true, keep the first column visible
+                var bMakeVisible = bVisible || (bKeepOne && iIndex === 0);
+                oColumn.setVisible(bMakeVisible);
+
+                // Update the icon in the menu item
+                var sColumnId = oColumn.getId().replace(this.createId(""), "");
+                var oMenuItem = this._findMenuItemByColumnId(sColumnId);
+                if (oMenuItem) {
+                    oMenuItem.setIcon(bMakeVisible ? "sap-icon://accept" : "sap-icon://decline");
+                }
+            }.bind(this));
+
+            // Save column visibility settings to user preferences
+            this._saveColumnSettings();
+        },
+
+        _findMenuItemByColumnId: function (sColumnId) {
+            var oMenu = this.byId("columnVisibilityMenu");
+            var aItems = oMenu.getItems();
+
+            for (var i = 0; i < aItems.length; i++) {
+                var oItem = aItems[i];
+                var oCustomData = oItem.getCustomData();
+
+                for (var j = 0; oCustomData && j < oCustomData.length; j++) {
+                    if (oCustomData[j].getKey() === "columnId" && oCustomData[j].getValue() === sColumnId) {
+                        return oItem;
+                    }
+                }
+            }
+
+            return null;
+        },
+
+        _saveColumnSettings: function () {
+            // Save column settings to user preferences
+            var oColumnLayout = this._getColumnLayout();
+
+            // For now, just log to console. Replace with your preferred storage method
+            console.log("Column settings saved:", oColumnLayout);
+
+            // Example with localStorage:
+            try {
+                localStorage.setItem("salesRegisterColumnSettings", JSON.stringify(oColumnLayout));
+            } catch (e) {
+                console.error("Failed to save column settings:", e);
+            }
+        },
+
+        _getColumnLayout: function () {
+            var oTable = this.byId("salesTable");
+            var aColumns = oTable.getColumns();
+            var aColumnLayout = [];
+
+            aColumns.forEach(function (oColumn, iIndex) {
+                var sColumnId = oColumn.getId().replace(this.createId(""), "");
+                aColumnLayout.push({
+                    id: sColumnId,
+                    visible: oColumn.getVisible(),
+                    index: iIndex
+                });
+            }.bind(this));
+
+            return aColumnLayout;
+        },
+
+        _loadColumnSettings: function () {
+            // Load column settings from user preferences
+            try {
+                var sSettings = localStorage.getItem("salesRegisterColumnSettings");
+                if (sSettings) {
+                    var oColumnLayout = JSON.parse(sSettings);
+                    this._applyColumnLayout(oColumnLayout);
+                    return true;
+                }
+            } catch (e) {
+                console.error("Failed to load column settings:", e);
+            }
+
+            return false;
+        },
+
+        _applyColumnLayout: function (aColumnLayout) {
+            var oTable = this.byId("salesTable");
+
+            // Apply visibility settings
+            aColumnLayout.forEach(function (oColumnData) {
+                var oColumn = this.byId(oColumnData.id);
+                if (oColumn) {
+                    oColumn.setVisible(oColumnData.visible);
+
+                    // Update the icon in the menu item
+                    var oMenuItem = this._findMenuItemByColumnId(oColumnData.id);
+                    if (oMenuItem) {
+                        oMenuItem.setIcon(oColumnData.visible ? "sap-icon://accept" : "sap-icon://decline");
+                    }
+                }
+            }.bind(this));
         },
 
         /**
@@ -1256,42 +1653,110 @@ sap.ui.define([
 
         /**
          * Finalizes the data load process with automatic text data integration
+         * Now ensures no duplicate groups when loading more data
          */
         _finishDataLoad: function (processedData, isLoadMore, totalCount) {
-            var totalAmount = processedData.reduce((sum, record) => sum + (record.InvoiceAmount || 0), 0);
+            var totalAmount = 0;
             var existingData = isLoadMore ? this.getView().getModel("salesData").getProperty("/results") : [];
-            var finalData = existingData.concat(processedData);
+            var finalData = [];
+
+            // Create a map to track unique groups (SalesDocument + SalesDocumentItem)
+            var groupMap = {};
+
+            // First, add all existing groups to the map
+            existingData.forEach(record => {
+                var groupKey = `${record.SalesDocument || 'N/A'}_${record.SalesDocumentItem || '000010'}`;
+                groupMap[groupKey] = record;
+            });
+
+            // Then, add new groups only if they don't already exist
+            processedData.forEach(record => {
+                var groupKey = `${record.SalesDocument || 'N/A'}_${record.SalesDocumentItem || '000010'}`;
+                if (!groupMap[groupKey]) {
+                    groupMap[groupKey] = record;
+                } else {
+                    console.log(`⚠️ Skipping duplicate group: ${groupKey}`);
+                }
+            });
+
+            // Convert the map back to array
+            finalData = Object.values(groupMap);
+
+            // Sort the final data to maintain order
+            finalData.sort((a, b) => {
+                if (a.SalesDocument !== b.SalesDocument) return a.SalesDocument.localeCompare(b.SalesDocument);
+                return a.SalesDocumentItem.localeCompare(b.SalesDocumentItem);
+            });
+
+            // Calculate total amount
+            totalAmount = finalData.reduce((sum, record) => sum + (record.InvoiceAmount || 0), 0);
 
             // Count records with text data for reporting
             var recordsWithTextData = finalData.filter(record =>
                 record.ZXT1 || record.ZXT3 || record.ZXT4 || record.ZXT5 || record.ZXT6 || record.ZXT7 || record.ZXT8
             ).length;
 
-            this.getView().getModel("salesData").setData({
+            // Update sales data model
+            var salesDataModel = this.getView().getModel("salesData");
+            salesDataModel.setData({
                 results: finalData,
                 count: finalData.length,
                 totalCount: totalCount,
                 originalRecordCount: isLoadMore ?
                     this.getView().getModel("salesData").getProperty("/originalRecordCount") + processedData.length :
-                    processedData.length,
+                    this.getView().getModel("salesData").getProperty("/originalRecordCount") || processedData.length,
                 totalAmount: totalAmount,
                 lastLoadTime: (new Date).toISOString(),
                 recordsWithTextData: recordsWithTextData // Track text data availability
             });
+            
+                        // Force refresh the model to ensure table binding updates
+            salesDataModel.refresh(true);
+            
+            // Ensure table binding is properly updated
+            var salesTable = this.byId("salesTable");
+            if (salesTable) {
+                var tableBinding = salesTable.getBinding("items");
+                if (tableBinding) {
+                    tableBinding.refresh();
+                    console.log("✅ Table binding refreshed successfully");
+                } else {
+                    console.log("⚠️ No table binding found, table may not be properly configured");
+                }
+            } else {
+                console.log("⚠️ Sales table not found");
+            }
+            
+            // Calculate if there are more records to load
+            var hasMore = false;
+            if (totalCount && finalData.length < totalCount) {
+                hasMore = true;
+            }
 
-            var hasMore = finalData.length < totalCount;
+            // Update pagination model with proper skip calculation
+            var pageSize = this.getView().getModel("filterData").getProperty("/pagingTop") || 500;
+            
+            // CRITICAL FIX: For load more, we need to track the actual loaded records from backend
+            // not just the final displayed records (which might be deduplicated)
+            var actualLoadedRecords = isLoadMore ? 
+                (this.getView().getModel("pagination").getProperty("/loadedRecords") + processedData.length) : 
+                processedData.length;
+            
+            // The next skip should be based on what we've actually loaded from backend, not displayed
+            var nextSkip = actualLoadedRecords;
+            
             this.getView().getModel("pagination").setData({
                 hasMore: hasMore,
-                currentSkip: finalData.length,
-                pageSize: this.getView().getModel("filterData").getProperty("/pagingTop") || 500,
-                totalRecords: totalCount,
-                loadedRecords: finalData.length
+                currentSkip: nextSkip, // This is the skip value for next load
+                pageSize: pageSize,
+                totalRecords: totalCount || 0,
+                loadedRecords: actualLoadedRecords
             });
 
             this._setLoading(false);
 
             var message = isLoadMore ?
-                `Loaded ${processedData.length} additional grouped records` :
+                `Loaded ${processedData.length} additional records, ${finalData.length - existingData.length} unique groups added` :
                 `Successfully loaded ${finalData.length} grouped sales records`;
 
             // Add text data info to the message
@@ -1299,9 +1764,26 @@ sap.ui.define([
                 message += ` (${recordsWithTextData} with text data)`;
             }
 
+            // Add pagination info
+            if (hasMore) {
+                message += `. More data available (${totalCount - finalData.length} records remaining)`;
+            }
+
             MessageToast.show(message);
 
             console.log(`📊 Final data summary: ${finalData.length} total records, ${recordsWithTextData} with text data`);
+            console.log(`📊 Pagination: hasMore=${hasMore}, nextSkip=${nextSkip}, totalRecords=${totalCount}`);
+            console.log(`📊 Data breakdown: existing=${existingData.length}, new=${processedData.length}, final=${finalData.length}`);
+
+            // Log duplicates if any were found
+            if (isLoadMore && processedData.length > (finalData.length - existingData.length)) {
+                var duplicates = processedData.length - (finalData.length - existingData.length);
+                console.log(`⚠️ Skipped ${duplicates} duplicate group(s) during load more`);
+            }
+            
+            // Final verification log
+            console.log(`🔍 VERIFICATION: Table should now show ${finalData.length} records`);
+            console.log(`🔍 VERIFICATION: Next load will skip ${nextSkip} records`);
         },
 
         /**
@@ -1418,6 +1900,52 @@ sap.ui.define([
                 default:
                     return "Information";
             }
+        },
+
+        /**
+         * Formats document type state for display
+         */
+        formatDocTypeState: function (docType) {
+            if (!docType) return "None";
+            switch (docType.toUpperCase()) {
+                case "F2":
+                    return "Success"; // Invoice
+                case "G2":
+                    return "Warning"; // Credit Memo
+                case "L2":
+                    return "Error"; // Debit Memo
+                default:
+                    return "Information";
+            }
+        },
+
+        /**
+         * Formats region state for display
+         */
+        formatRegionState: function (region) {
+            if (!region) return "None";
+            // Add your region-specific logic here
+            return "Information";
+        },
+
+        /**
+         * Formats amount state for display
+         */
+        formatAmountState: function (amount) {
+            if (!amount || amount === 0) return "None";
+            if (amount > 0) return "Success";
+            if (amount < 0) return "Error";
+            return "Information";
+        },
+
+        /**
+         * Formats condition state for display
+         */
+        formatConditionState: function (amount) {
+            if (!amount || amount === 0) return "None";
+            if (amount > 0) return "Success";
+            if (amount < 0) return "Error";
+            return "Information";
         }
     });
 });
