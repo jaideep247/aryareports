@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:sap="http://www.sap.com/Protocols/SAPData">
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_AGGREGATION',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="Org.OData.Aggregation.V1" Alias="Aggregation"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_ANALYTICS',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.Analytics.v1" Alias="Analytics"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_CAPABILITIES',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="Org.OData.Capabilities.V1" Alias="Capabilities"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_CODELIST',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.CodeList.v1" Alias="SAP__CodeList"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_COMMON',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.Common.v1" Alias="Common"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_COMMUNICATION',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.Communication.v1" Alias="Communication"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_MEASURES',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="Org.OData.Measures.V1" Alias="Measures"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_ODM',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.ODM.v1" Alias="SAP__ODM"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_PERSONALDATA',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.PersonalData.v1" Alias="PersonalData"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_UI',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="com.sap.vocabularies.UI.v1" Alias="UI"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="/sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_VALIDATION',Version='0001',SAP__Origin='')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="Org.OData.Validation.V1" Alias="Validation"/>
+    </edmx:Reference>
+    <edmx:DataServices m:DataServiceVersion="2.0">
+        <Schema Namespace="YY1_SALESREGISTER_CDS" xml:lang="en" sap:schema-version="1" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+            <EntityType Name="YY1_SALESREGISTERType" sap:label="SALES REGISTER" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="BillingDocument"/>
+                </Key>
+                <Property Name="BillingDocument" Type="Edm.String" Nullable="false" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="SAP Invoice No." sap:quickinfo="Billing Document"/>
+                <Property Name="BillingDocumentDate" Type="Edm.DateTime" Precision="0" sap:display-format="Date" sap:required-in-filter="false" sap:label="Invoice Date" sap:quickinfo="Billing Date"/>
+                <Property Name="BusinessPartnerName1" Type="Edm.String" MaxLength="40" sap:required-in-filter="false" sap:label="Customer Name(Sold To)" sap:quickinfo="Name 1"/>
+                <Property Name="SalesDocument" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Sales Document"/>
+                <Property Name="Plant" Type="Edm.String" MaxLength="4" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Plant"/>
+                <Property Name="BillingDocumentType" Type="Edm.String" MaxLength="4" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Invoice Type" sap:quickinfo="Billing Type"/>
+                <Property Name="TaxCode" Type="Edm.String" MaxLength="2" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Tax Code" sap:quickinfo="Tax on Sales/Purchases Code"/>
+                <Property Name="PayerParty" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Payer"/>
+                <Property Name="Division" Type="Edm.String" MaxLength="2" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Division"/>
+                <Property Name="CustomerPaymentTerms" Type="Edm.String" MaxLength="4" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Terms of Payment" sap:quickinfo="Key for Terms of Payment"/>
+                <Property Name="CustomerFullName_1" Type="Edm.String" MaxLength="220" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Name(Sold To)" sap:quickinfo="Customer Full Name"/>
+                <Property Name="Region" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="State" sap:quickinfo="Region (State, Province, County)"/>
+                <Property Name="NetDueDate" Type="Edm.DateTime" Precision="0" sap:display-format="Date" sap:required-in-filter="false" sap:label="Due Date" sap:quickinfo="Due Date for Net Payment"/>
+                <Property Name="TaxCode_1" Type="Edm.String" MaxLength="2" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Tax Code" sap:quickinfo="Tax on Sales/Purchases Code"/>
+                <Property Name="PayerParty_1" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Head Office Code" sap:quickinfo="Payer"/>
+                <Property Name="AdditionalCustomerGroup1" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Group 1"/>
+                <Property Name="AdditionalCustomerGroup2" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Group 2"/>
+                <Property Name="AdditionalCustomerGroup3" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Group 3"/>
+                <Property Name="AdditionalCustomerGroup5" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Group 5"/>
+                <Property Name="AdditionalCustomerGroup4" Type="Edm.String" MaxLength="3" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Customer Group 4"/>
+                <Property Name="TotalNetAmount" Type="Edm.Decimal" Precision="16" Scale="3" sap:required-in-filter="false" sap:unit="TransactionCurrency" sap:label="Net Value" sap:quickinfo="Net Value in Document Currency"/>
+                <Property Name="ProfitCenter" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Profit Center"/>
+                <Property Name="BillingQuantity" Type="Edm.Decimal" Precision="13" Scale="3" sap:required-in-filter="false" sap:unit="BillingQuantityUnit" sap:label="Invoiced Quantity" sap:quickinfo="Actual Invoiced Quantity"/>
+                <Property Name="TransactionCurrency" Type="Edm.String" MaxLength="5" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Document Currency" sap:quickinfo="SD Document Currency" sap:semantics="currency-code"/>
+                <Property Name="BillingQuantityUnit" Type="Edm.String" MaxLength="3" sap:required-in-filter="false" sap:label="Sales Unit" sap:semantics="unit-of-measure"/>
+                <Property Name="BillingDocumentItemText" Type="Edm.String" MaxLength="40" sap:required-in-filter="false" sap:label="Item Description" sap:quickinfo="Short Text for Sales Order Item"/>
+                <Property Name="ConditionType" Type="Edm.String" MaxLength="4" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Condition Type"/>
+                <Property Name="ConditionAmount" Type="Edm.Decimal" Precision="16" Scale="3" sap:required-in-filter="false" sap:unit="TransactionCurrency" sap:label="Condition Value"/>
+                <Property Name="Product" Type="Edm.String" MaxLength="40" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Product" sap:quickinfo="Product Number"/>
+                <Property Name="BillingDocumentItem" Type="Edm.String" MaxLength="6" sap:display-format="NonNegative" sap:required-in-filter="false" sap:text="BillingDocumentItemText" sap:label="Item" sap:quickinfo="Billing Item"/>
+                <Property Name="BillingDocumentTypeName" Type="Edm.String" MaxLength="40" sap:required-in-filter="false" sap:label="Description"/>
+                <Property Name="SalesDocumentItem" Type="Edm.String" MaxLength="6" sap:display-format="NonNegative" sap:required-in-filter="false" sap:label="Sales Document Item"/>
+                <Property Name="BillToParty" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="Bill-to Party"/>
+                <Property Name="GLAccount" Type="Edm.String" MaxLength="10" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="G/L Account"/>
+                <Property Name="BPIdentificationNumber" Type="Edm.String" MaxLength="60" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="PAN No." sap:quickinfo="Identification Number"/>
+                <Property Name="IN_EDocEInvcEWbillNmbr" Type="Edm.String" MaxLength="12" sap:display-format="NonNegative" sap:required-in-filter="false" sap:label="eWay Bill Number" sap:quickinfo="eDocument India: eWayBill Number"/>
+                <Property Name="IN_EDocEWbillStatus" Type="Edm.String" MaxLength="6" sap:display-format="UpperCase" sap:required-in-filter="false" sap:label="eWay Bill Status" sap:quickinfo="eDocument India eInvoice: eWay Bill Status"/>
+                <Property Name="IN_EDocEInvcEWbillValidityDate" Type="Edm.DateTime" Precision="0" sap:display-format="Date" sap:required-in-filter="false" sap:label="eWay Bill Valid To" sap:quickinfo="eDocument India: eWay Bill - Valid To"/>
+                <Property Name="PurchaseOrderByShipToParty" Type="Edm.String" MaxLength="35" sap:required-in-filter="false" sap:label="Customer Reference (Ship-to Party)" sap:quickinfo="Ship-to Party's Customer Reference"/>
+            </EntityType>
+            <EntityContainer Name="YY1_SALESREGISTER_CDS_Entities" m:IsDefaultEntityContainer="true" sap:message-scope-supported="true" sap:supported-formats="atom json xlsx">
+                <EntitySet Name="YY1_SALESREGISTER" EntityType="YY1_SALESREGISTER_CDS.YY1_SALESREGISTERType" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:content-version="1"/>
+            </EntityContainer>
+            <Annotation Term="Core.SchemaVersion" String="1.0.0" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <Annotations Target="YY1_SALESREGISTER_CDS.YY1_SALESREGISTER_CDS_Entities" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                <Annotation Term="Common.ApplyMultiUnitBehaviorForSortingAndFiltering" Bool="true"/>
+            </Annotations>
+            <Annotations Target="YY1_SALESREGISTER_CDS.YY1_SALESREGISTER_CDS_Entities" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <atom:link rel="self" href="/sap/opu/odata/sap/YY1_SALESREGISTER_CDS/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+            <atom:link rel="latest-version" href="/sap/opu/odata/sap/YY1_SALESREGISTER_CDS/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

@@ -9,1943 +9,1056 @@ sap.ui.define([
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment"
 ], function (
-    Controller,
-    JSONModel,
-    MessageToast,
-    MessageBox,
-    Filter,
-    FilterOperator,
-    Spreadsheet,
-    Sorter,
-    Fragment
+    Controller, JSONModel, MessageToast, MessageBox,
+    Filter, FilterOperator, Spreadsheet, Sorter, Fragment
 ) {
     "use strict";
 
+    // Define the page size for fetching data in batches
+    const PAGE_SIZE = 50000;
+
     return Controller.extend("aryasalesregister.controller.salesregister", {
 
-        // --- Lifecycle Methods ---
-        /**
-         * Initializes the controller. Sets up the models and performs configuration validation.
-         */
+        // ========================================
+        // CONSTANTS
+        // ========================================
+        _CONSTANTS: {
+            SERVICE_URLS: {
+                SALES_REGISTER: "/YY1_SALESREGISTER",
+                SALES_ORDER: "/A_SalesOrder"
+            },
+            CONDITION_TYPES: {
+                BASE_PRICE: "PPR0",
+                DISCOUNT: "DRV1",
+                ADDITIONAL_CHARGES: "ZDV2",
+                IGST: "JOIG",
+                CGST: "JOCG",
+                SGST: "JOSG",
+                TCS: "ZTCS",
+                DELAY_CHARGES: "ZDV4"
+            },
+            CUSTOMER_TYPES: {
+                B2B: "B2B",
+                B2C: "B2C"
+            },
+            ALL_COLUMNS: [
+                "actionsCol", "invoiceMonthCol", "aryaDTRCol", "sapInvoiceCol", "contractIdCol",
+                "customerInfoCol", "customerStateCol", "shipToCol", "customerGSTINCol",
+                "paymentTermsCol", "salesOrderCol", "dueDateCol", "plantCol", "invoiceTypeCol",
+                "taxCodeCol", "customerNumberCol", "headOfficeCol", "custGroup1Col", "custGroup2Col",
+                "custGroup3Col", "custGroup4Col", "custGroup5Col", "customerTypeCol", "invoiceMonthCol",
+                "salesDivisionCol", "productInfoCol", "glCodeCol", "hsnCol", "materialCodeCol",
+                "materialDescCol", "panCol", "tanCol", "financialsCol", "discountCol", "addChargesCol",
+                "igstCol", "cgstCol", "sgstCol", "invoiceAmountCol", "profitCenterCol", "warehouseCodeCol",
+                "warehouseNameCol", "warehouseStateCol", "warehouseLocationCol", "clusterIdCol",
+                "parentInvoiceCol", "parentInvoiceDateCol", "docStatusCol", "quantityCol", "ratePerMTCol",
+                "delayChargesCol", "ewayBillCol", "ewayBillDateCol", "tcsCol"
+            ],
+            DEFAULT_COLUMNS: [
+                "actionsCol", "invoiceMonthCol", "sapInvoiceCol", "contractIdCol", "customerInfoCol",
+                "customerStateCol","customerTypeCol", "salesOrderCol", "productInfoCol", "quantityCol",
+                "financialsCol", "invoiceAmountCol", "docStatusCol"
+            ]
+        },
+
+        // ========================================
+        // LIFECYCLE METHODS
+        // ========================================
         onInit: function () {
             console.log("🚀 Sales Register Controller initializing...");
+
             this._initializeModels();
             this._validateConfiguration();
             this._loadColumnSettings();
+            this._initializeServices();
+
+            // Safely attach resize listener for table height
+            if (window.addEventListener) {
+                window.addEventListener('resize', this._fixTableScrollBars.bind(this));
+            } else {
+                console.warn("Window event listener unavailable.");
+            }
             console.log("✅ Controller initialized successfully");
         },
 
-        /**
-         * Cleans up resources when the controller is destroyed.
-         */
         onExit: function () {
-            if (this._oDetailDialog) {
-                this._oDetailDialog.destroy();
-            }
-            if (this._oRowDetailsDialog) {
-                this._oRowDetailsDialog.destroy();
-            }
-        },
-
-        // --- Model Management & Initialization ---
-        /**
-         * Initializes the JSON models used by the view.
-         */
-        _initializeModels: function () {
-            var salesDataModel = new JSONModel({
-                results: [],
-                count: 0,
-                totalCount: 0,
-                originalRecordCount: 0,
-                totalAmount: 0,
-                lastLoadTime: null,
-                recordsWithTextData: 0
+            [this._oDetailDialog, this._oRowDetailsDialog].forEach(dialog => {
+                if (dialog) dialog.destroy();
             });
-            this.getView().setModel(salesDataModel, "salesData");
+            if (window.removeEventListener) {
+                window.removeEventListener('resize', this._fixTableScrollBars.bind(this));
+            }
+        },
 
-            var filterDataModel = new JSONModel({
-                billingDocument: "",
-                salesOrder: "",
-                billingDocumentType: "",
-                fromDate: null,
-                toDate: null,
-                pagingTop: 500,
-                groupingMethod: "salesDocAndItems",
-                autoRefresh: false,
-                showConditionDetails: true
-            });
-            this.getView().setModel(filterDataModel, "filterData");
-
-            var loadingStateModel = new JSONModel({
-                loading: false,
-                currentOperation: "",
-                progress: 0,
-                totalSteps: 0,
-                currentStep: 0
-            });
-            this.getView().setModel(loadingStateModel, "loadingState");
-
-            var paginationModel = new JSONModel({
-                hasMore: false,
-                currentSkip: 0,
-                pageSize: 500,
-                totalRecords: 0,
-                loadedRecords: 0
-            });
-            this.getView().setModel(paginationModel, "pagination");
-
-            var salesTextModel = new JSONModel({
-                textData: {},
-                loadedSalesOrders: []
-            });
-            this.getView().setModel(salesTextModel, "salesText");
-
-            // Initialize services
-            this._initializeServices();
+        onAfterRendering: function () {
+            this._fixTableScrollBars();
+            this._setupFixedColumns();
         },
 
         /**
-         * Initialize services including SalesOrderTextService with proper model checking
+         * ✅ NEW: Setup fixed/frozen columns for proper scroll sync
          */
-        _initializeServices: function () {
-            // Load SalesOrderTextService
-            sap.ui.require([
-                "aryasalesregister/services/SalesOrderTextService"
-            ], (SalesOrderTextService) => {
-                this.salesOrderTextService = new SalesOrderTextService(this);
-                console.log("✅ SalesOrderTextService initialized");
-
-                // Check if sales order API model is properly configured
-                this._validateSalesOrderAPIConfiguration();
-            }, (error) => {
-                console.warn("⚠️ Failed to load SalesOrderTextService:", error);
-                this.salesOrderTextService = null;
-            });
+        _setupFixedColumns: function () {
+            const table = this.byId("salesTable");
+            if (table && table.setFixedColumnCount) {
+                // Freeze first 3 columns (Actions, Invoice Month, SAP Invoice)
+                table.setFixedColumnCount(3);
+                console.log("✅ Fixed columns configured for scroll sync");
+            }
         },
 
-        /**
-         * Validates that the Sales Order API model is properly configured
-         */
-        _validateSalesOrderAPIConfiguration: function () {
-            console.group("🔧 Validating Sales Order API Configuration");
-
-            const component = this.getOwnerComponent();
-            const availableModels = Object.keys(component.oModels || {});
-
-            console.log("📋 Available models:", availableModels);
-
-            // Check for the actual model name from manifest.json
-            const possibleModelNames = ["salesOrder", "salesOrderAPI", "API_SALES_ORDER_SRV"];
-            let salesOrderModel = null;
-            let foundModelName = null;
-
-            for (let modelName of possibleModelNames) {
-                salesOrderModel = component.getModel(modelName);
-                if (salesOrderModel) {
-                    foundModelName = modelName;
-                    break;
-                }
-            }
-
-            if (salesOrderModel) {
-                const serviceUrl = salesOrderModel.sServiceUrl || salesOrderModel.getServiceUrl?.();
-                console.log(`✅ Sales Order API Model found: ${foundModelName}`);
-                console.log(`🌐 Service URL: ${serviceUrl}`);
-
-                // Test metadata loading
-                salesOrderModel.getMetaModel().loaded().then(() => {
-                    console.log("✅ Sales Order API Metadata loaded successfully");
-                    console.log("🔄 Text data auto-fetch is ready");
-                }).catch(error => {
-                    console.error("❌ Sales Order API Metadata failed:", error);
-                    console.error("⚠️ Text data auto-fetch may not work properly");
-                });
-
-            } else {
-                console.error("❌ Sales Order API Model not found!");
-                console.error("📋 Checked model names:", possibleModelNames);
-                console.error("🔧 Expected model name from your manifest.json: 'salesOrder'");
-                console.error("⚠️ Text data auto-fetch will return empty values");
-
-                // Show user-friendly message
-                MessageToast.show("Warning: Sales Order model 'salesOrder' not ready - text fields may be empty");
-            }
-
-            console.groupEnd();
-        },
-
-        /**
-         * Validates that the necessary OData models are configured correctly.
-         */
-        _validateConfiguration: function () {
-            console.group("🔧 Validating Configuration");
-            var salesModel = this.getView().getModel();
-            if (!salesModel) {
-                console.error("❌ Sales Register Model not found in view, checking component...");
-                var ownerComponent = this.getOwnerComponent();
-                salesModel = ownerComponent?.getModel();
-                if (salesModel) {
-                    this.getView().setModel(salesModel);
-                    console.log("✅ Sales Register Model found in component and set to view");
-                } else {
-                    console.error("❌ Sales Register Model not found anywhere - check manifest.json");
-                }
-            }
-
-            if (salesModel) {
-                var serviceUrl = salesModel.sServiceUrl || salesModel.getServiceUrl();
-                console.log("✅ Sales Register Model configured:", serviceUrl);
-                salesModel.getMetaModel().loaded().then(() => {
-                    console.log("✅ Sales Register Metadata loaded successfully");
-                }).catch(error => {
-                    console.error("❌ Sales Register Metadata failed:", error);
-                });
-            }
-            console.groupEnd();
-        },
-
-        // --- Event Handlers ---
-        /**
-         * Handles the "Load Data" button press
-         */
-        onLoadData: function () {
-            this._loadData();
-        },
-
-        // --- Data Loading & Processing ---
-        /**
-         * The main method for loading data. Orchestrates the process of loading sales data,
-         * processing it with text information, and grouping by Sales Document & Item.
-         * @param {boolean} isLoadMore - Flag to indicate if this is an additional load (for pagination).
-         * @param {number} skip - The number of records to skip for pagination.
-         */
-        _loadData: function (isLoadMore, skip) {
-            console.group("📊 Starting Enhanced Sales Data Load");
-            var salesModel = this.getView().getModel();
-            if (!salesModel) {
-                MessageBox.error("Sales Register service is not configured. Please check your manifest.json file.");
-                console.groupEnd();
-                return;
-            }
-
-            var filterData = this.getView().getModel("filterData").getData();
-            var validationErrors = this._validateFilterData(filterData);
-            if (validationErrors.length > 0) {
-                MessageBox.error("Filter validation failed:\n" + validationErrors.join("\n"));
-                console.groupEnd();
-                return;
-            }
-
-            this._setLoading(true, "Initializing data load...", 0, 3);
-            if (!isLoadMore) {
-                this.getView().getModel("salesData").setData({
-                    results: [],
-                    count: 0,
-                    totalCount: 0,
-                    originalRecordCount: 0,
-                    totalAmount: 0,
-                    recordsWithTextData: 0
-                });
-                this.getView().getModel("pagination").setData({
-                    hasMore: false,
-                    currentSkip: 0,
-                    pageSize: filterData.pagingTop || 500,
-                    totalRecords: 0,
-                    loadedRecords: 0
-                });
-            }
-
-            var currentSkip = skip || 0;
-            var pageSize = filterData.pagingTop || 500;
-
-            console.log(`📊 Loading data: skip=${currentSkip}, pageSize=${pageSize}, isLoadMore=${isLoadMore}`);
-
-            this._loadSalesDataWithFilters(currentSkip, pageSize)
-                .then(salesResult => this._processSalesResult(salesResult, isLoadMore))
-                .catch(error => this._handleLoadError(error))
-                .finally(() => {
-                    console.groupEnd();
-                });
-        },
-
-        /**
-         * Loads the sales register data with the specified filters and pagination.
-         * @param {number} skip - Number of records to skip.
-         * @param {number} top - Number of records to retrieve.
-         * @returns {Promise<Object[]>} A promise that resolves with the sales data results.
-         */
-        _loadSalesDataWithFilters: function (skip, top) {
-            return new Promise((resolve, reject) => {
-                this._setLoading(true, "Loading sales documents...", 1, 3);
-                var salesModel = this.getView().getModel();
-                var filters = this._buildSalesFilters();
-                var urlParameters = this._buildSalesUrlParameters(skip, top);
-                var path = "/YY1_SALESREGISTER";
-
-                console.log(`🔗 Loading from: ${path}`);
-                console.log(`📋 URL Parameters:`, urlParameters);
-                console.log(`🔍 Filters:`, filters.length, "active filters");
-
-                salesModel.read(path, {
-                    filters: filters,
-                    urlParameters: urlParameters,
-                    success: data => {
-                        var results = data.results || [];
-                        results.totalCount = data.__count;
-                        results.hasNext = !!data.__next;
-                        results.skip = skip;
-                        results.top = top;
-                        
-                        console.log(`✅ Data loaded: ${results.length} records, total count: ${data.__count}, skip: ${skip}`);
-                        
-                        resolve(results);
-                    },
-                    error: error => {
-                        var errorMessage = this._buildErrorMessage("Sales Data", error);
-                        console.error("❌ Sales data load error:", error);
-                        reject(new Error(errorMessage));
-                    }
-                });
-            });
-        },
-
-        /**
-         * Processes the loaded sales data by automatically loading text data and grouping
-         * @param {Object[]} salesResult - The sales data results.
-         * @param {boolean} isLoadMore - Whether this is an additional load.
-         * @returns {Promise<void>}
-         */
-        _processSalesResult: async function (salesResult, isLoadMore) {
-            if (salesResult.length === 0) {
-                this._finishDataLoad([], isLoadMore, 0);
-                return Promise.resolve();
-            }
-
-            this._setLoading(true, `Processing ${salesResult.length} sales records...`, 2, 4);
-
-            // Store original record count
-            var originalRecordCount = salesResult.length;
-
-            // Automatically load sales order text data for all fetched sales orders
-            var enhancedDataWithText = salesResult;
-            if (this.salesOrderTextService) {
-                try {
-                    this._setLoading(true, "Automatically loading sales order text data...", 3, 4);
-                    console.log("🔄 Auto-fetching text data for all loaded sales orders...");
-                    enhancedDataWithText = await this.salesOrderTextService.loadAndMapSalesOrderText(salesResult);
-                    console.log("✅ Text data auto-fetch completed");
-                } catch (error) {
-                    console.warn("⚠️ Auto text loading failed, continuing without text data:", error);
-                    MessageToast.show("Warning: Sales order text data could not be loaded automatically");
-                    enhancedDataWithText = salesResult;
-                }
-            } else {
-                console.warn("⚠️ SalesOrderTextService not available for auto-fetch");
-                MessageToast.show("Warning: Text service not configured - ZXT fields will be empty");
-            }
-
-            // Group data by Sales Document & Item with enhanced text data
-            this._setLoading(true, "Grouping with text data and calculating totals...", 4, 4);
-            var groupedData = this._groupSalesDataByDocumentAndItem(enhancedDataWithText);
-
-            // Set original record count in model
-            if (!isLoadMore) {
-                this.getView().getModel("salesData").setProperty("/originalRecordCount", originalRecordCount);
-            }
-
-            this._finishDataLoad(groupedData, isLoadMore, salesResult.totalCount);
-
-            return Promise.resolve();
-        },
-
-        /**
-         * Groups sales data by Sales Document and Item, calculating invoice amounts
-         * This is different from GST grouping - it groups by Sales Document + Item combination
-         * @param {Object[]} salesData - The raw sales data with enhanced text data
-         * @returns {Object[]} Array of grouped sales summaries
-         */
-        _groupSalesDataByDocumentAndItem: function (salesData) {
-            console.log("📊 Grouping sales data by Sales Document & Item with invoice calculation...");
-
-            var groupedData = {};
-
-            salesData.forEach(item => {
-                var groupKey = `${item.SalesDocument || 'N/A'}_${item.SalesDocumentItem || '000010'}`;
-
-                if (!groupedData[groupKey]) {
-                    // Initialize document group with enhanced data
-                    groupedData[groupKey] = {
-                        // Document identifiers
-                        BillingDocument: item.BillingDocument,
-                        SalesDocument: item.SalesDocument,
-                        SalesDocumentItem: item.SalesDocumentItem,
-                        BillingDocumentDate: item.BillingDocumentDate,
-                        BillingDocumentType: item.BillingDocumentType,
-
-                        // Customer information
-                        CustomerNumber: item.PayerParty,
-                        CustomerDisplay: item.CustomerFullName_1,
-                        CustomerState: item.Region,
-                        CustomerGSTIN: item.BusinessPartnerName1,
-                        CustomerPaymentTerms: item.CustomerPaymentTerms,
-
-                        // Product information
-                        Product: item.Product,
-                        ProductDescription: item.BillingDocumentItemText,
-                        BillingDocumentItemText: item.BillingDocumentItemText, // Keep both for compatibility
-                        Plant: item.Plant,
-                        BillingQuantity: this._parseQuantity(item.BillingQuantity),
-                        BillingQuantityUnit: item.BillingQuantityUnit,
-
-                        // Currency and additional fields
-                        TransactionCurrency: item.TransactionCurrency,
-                        Division: item.Division,
-                        TaxCode: item.TaxCode,
-                        ProfitCenter: item.ProfitCenter,
-
-                        // Due Date calculation (approximation - you may need to adjust this based on payment terms)
-                        NetDueDate: this._calculateDueDate(item.BillingDocumentDate, item.CustomerPaymentTerms),
-
-                        // Customer Type (derive from available data or set default)
-                        CustomerType: this._deriveCustomerType(item),
-
-                        // Initialize condition amounts
-                        PPR0: 0,     // Rate/MT
-                        DRV1: 0,     // Discount
-                        ZDV2: 0,     // Additional Charges
-                        JOIG: 0,     // IGST
-                        JOCG: 0,     // CGST
-                        JOSG: 0,     // SGST
-                        ZTCS: 0,     // TCS
-                        ZDV4: 0,     // Delay Charges
-
-                        // Calculated amounts
-                        TotalNetAmount: 0,
-                        InvoiceAmount: 0,
-
-                        // E-Invoice status
-                        IN_EDocEWbillStatus: item.IN_EDocEWbillStatus,
-                        IN_EDocEInvcEWbillNmbr: item.IN_EDocEInvcEWbillNmbr,
-
-                        // Sales order text fields (from auto-fetch)
-                        ZXT1: item.ZXT1,  // Warehouse Code
-                        ZXT3: item.ZXT3,  // Warehouse Location
-                        ZXT4: item.ZXT4,  // Contract/Trade ID
-                        ZXT5: item.ZXT5,  // Service Period
-                        ZXT6: item.ZXT6,  // Material Description
-                        ZXT7: item.ZXT7,  // Flag
-                        ZXT8: item.ZXT8,  // Item Number
-
-                        DetailRecords: []
-                    };
-                }
-
-                var group = groupedData[groupKey];
-
-                // Accumulate condition amounts based on condition type
-                var condAmount = this._parseAmount(item.ConditionAmount);
-                if (item.ConditionType && group.hasOwnProperty(item.ConditionType)) {
-                    group[item.ConditionType] += condAmount;
-                }
-
-                // For net amount calculation, use PPR0 (base price)
-                if (item.ConditionType === 'PPR0') {
-                    group.TotalNetAmount += condAmount;
-                }
-
-                // Store detail record
-                group.DetailRecords.push(item);
-
-                console.log(`📝 Processing Sales Doc: ${item.SalesDocument}, Item: ${item.SalesDocumentItem}, Condition: ${item.ConditionType}, Amount: ${condAmount}`);
-            });
-
-            // Final calculation for each group
-            Object.values(groupedData).forEach(group => {
-                // Calculate Invoice Amount = Net Amount + Additional Charges + Taxes - Discounts
-                group.InvoiceAmount = group.TotalNetAmount +
-                    (group.ZDV2 || 0) +      // Additional charges
-                    (group.JOIG || 0) +      // IGST
-                    (group.JOCG || 0) +      // CGST
-                    (group.JOSG || 0) +      // SGST
-                    (group.ZTCS || 0) +      // TCS
-                    (group.ZDV4 || 0) -      // Delay charges
-                    (group.DRV1 || 0);       // Discount
-
-                // Round amounts to 2 decimal places
-                group.TotalNetAmount = Math.round(group.TotalNetAmount * 100) / 100;
-                group.InvoiceAmount = Math.round(group.InvoiceAmount * 100) / 100;
-
-                console.log(`🎯 Sales Group ${group.SalesDocument}-${group.SalesDocumentItem} FINAL TOTALS:`);
-                console.log(`   💵 Net Amount: ${group.TotalNetAmount}`);
-                console.log(`   💸 Invoice Amount: ${group.InvoiceAmount}`);
-                console.log(`   📊 Detail Records: ${group.DetailRecords.length}`);
-            });
-
-            // Convert to array and sort
-            var groupedArray = Object.values(groupedData);
-            groupedArray.sort((a, b) => {
-                if (a.SalesDocument !== b.SalesDocument) return a.SalesDocument.localeCompare(b.SalesDocument);
-                return a.SalesDocumentItem.localeCompare(b.SalesDocumentItem);
-            });
-
-            console.log(`✅ Grouped ${salesData.length} line items into ${groupedArray.length} sales document summaries`);
-            return groupedArray;
-        },
-
-        /**
-         * Calculate due date based on billing date and payment terms
-         * @param {Date} billingDate - The billing document date
-         * @param {string} paymentTerms - Payment terms code (e.g., "NT90", "NT30")
-         * @returns {Date} Calculated due date
-         */
-        _calculateDueDate: function (billingDate, paymentTerms) {
-            if (!billingDate) return null;
-
-            var baseDate = new Date(billingDate);
-            var days = 0;
-
-            // Extract days from payment terms (simple parsing)
-            if (paymentTerms) {
-                var matches = paymentTerms.match(/\d+/);
-                if (matches) {
-                    days = parseInt(matches[0], 10);
-                }
-            }
-
-            // Default to 30 days if no payment terms found
-            if (days === 0) {
-                days = 30;
-            }
-
-            var dueDate = new Date(baseDate);
-            dueDate.setDate(dueDate.getDate() + days);
-
-            return dueDate;
-        },
-
-        /**
-         * Derive customer type from available data
-         * @param {Object} item - Sales data item
-         * @returns {string} Customer type ("B2B", "B2C", or "Unknown")
-         */
-        _deriveCustomerType: function (item) {
-            // Simple logic - you may need to adjust based on your business rules
-            if (item.BusinessPartnerName1 && item.BusinessPartnerName1.trim()) {
-                // If GSTIN is present, likely B2B
-                return "B2B";
-            }
-            return "B2C"; // Default assumption
-        },
-
-        // --- Filter & URL Parameter Builders ---
-        /**
-         * Builds the OData filter array for the Sales Register service
-         * @returns {sap.ui.model.Filter[]} An array of filters.
-         */
-        _buildSalesFilters: function () {
-            var filters = [];
-            var filterData = this.getView().getModel("filterData").getData();
-
-            if (filterData.billingDocument && filterData.billingDocument.trim()) {
-                filters.push(new Filter("BillingDocument", FilterOperator.EQ, filterData.billingDocument.trim()));
-            }
-
-            if (filterData.salesOrder && filterData.salesOrder.trim()) {
-                filters.push(new Filter("SalesDocument", FilterOperator.EQ, filterData.salesOrder.trim()));
-            }
-
-            if (filterData.billingDocumentType && filterData.billingDocumentType.trim()) {
-                filters.push(new Filter("BillingDocumentType", FilterOperator.EQ, filterData.billingDocumentType.trim()));
-            }
-
-            if (filterData.fromDate) {
-                filters.push(new Filter("BillingDocumentDate", FilterOperator.GE, filterData.fromDate));
-            }
-
-            if (filterData.toDate) {
-                filters.push(new Filter("BillingDocumentDate", FilterOperator.LE, filterData.toDate));
-            }
-
-            console.log("🔍 Built Sales filters:", filters);
-            return filters;
-        },
-
-        /**
-         * Creates OData URL parameters for the Sales Register service
-         * @param {number} skip - The number of records to skip.
-         * @param {number} top - The number of records to retrieve.
-         * @returns {Object} A key-value map of URL parameters.
-         */
-        _buildSalesUrlParameters: function (skip, top) {
-            var params = {
-                $select: this._getSalesSelectFields(),
-                $top: top || 500,
-                $orderby: "SalesDocument asc,SalesDocumentItem asc,BillingDocument asc",
-                $inlinecount: "allpages"
-            };
-            
-            // Always add skip parameter if it's greater than 0
-            if (skip > 0) {
-                params["$skip"] = skip;
-                console.log(`📊 Adding skip parameter: ${skip}`);
-            }
-            
-            console.log(`📋 Built URL parameters:`, params);
-            return params;
-        },
-
-        /**
-         * Returns a comma-separated string of fields to select from the Sales Register service.
-         * @returns {string} The list of selected fields.
-         */
-        _getSalesSelectFields: function () {
-            return "BillingDocument,BillingDocumentDate,BillingDocumentType,SalesDocument,SalesDocumentItem," +
-                "Product,BillingDocumentItemText,BillingQuantity,BillingQuantityUnit,ConditionType," +
-                "ConditionAmount,TransactionCurrency,CustomerFullName_1,BusinessPartnerName1,PayerParty," +
-                "Region,Plant,Division,ProfitCenter,TaxCode,CustomerPaymentTerms," +
-                "IN_EDocEWbillStatus,IN_EDocEInvcEWbillNmbr";
-        },
-
-        // --- Quick Date Filter Methods ---
-        /**
-         * Consolidated quick filter method for different time periods
-         * @param {string} period - "currentMonth", "currentQuarter", "currentYear", "lastMonth"
-         */
-        onQuickFilterTimePeriod: function (period) {
-            var today = new Date();
-            var firstDay, lastDay;
-
-            switch (period) {
-                case "currentMonth":
-                    firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                    lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                    break;
-
-                case "currentQuarter":
-                    var quarter = Math.floor(today.getMonth() / 3);
-                    firstDay = new Date(today.getFullYear(), quarter * 3, 1);
-                    lastDay = new Date(today.getFullYear(), (quarter + 1) * 3, 0);
-                    break;
-
-                case "currentYear":
-                    firstDay = new Date(today.getFullYear(), 0, 1);
-                    lastDay = new Date(today.getFullYear(), 11, 31);
-                    break;
-
-                case "lastMonth":
-                    firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
-                    break;
-
-                default:
-                    MessageToast.show("Invalid time period specified");
-                    return;
-            }
-
-            this.getView().getModel("filterData").setData({
-                billingDocument: "",
-                salesOrder: "",
-                billingDocumentType: "",
-                fromDate: firstDay,
-                toDate: lastDay,
-                pagingTop: 500,
-                groupingMethod: "salesDocAndItems",
-                autoRefresh: false
-            });
-
-            MessageToast.show(`Filter set to ${period.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-        },
-
+        // ========================================
+        // QUICK FILTER METHODS
+        // ========================================
         onQuickFilterCurrentMonth: function () {
-            this.onQuickFilterTimePeriod("currentMonth");
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            this._applyQuickFilter(firstDay, lastDay);
+            MessageToast.show("Filter set to current month");
+            this.onLoadData();
         },
 
         onQuickFilterCurrentQuarter: function () {
-            this.onQuickFilterTimePeriod("currentQuarter");
+            const today = new Date();
+            const quarter = Math.floor(today.getMonth() / 3);
+            const firstDay = new Date(today.getFullYear(), quarter * 3, 1);
+            const lastDay = new Date(today.getFullYear(), (quarter + 1) * 3, 0);
+
+            this._applyQuickFilter(firstDay, lastDay);
+            MessageToast.show("Filter set to current quarter");
+            this.onLoadData();
         },
 
         onQuickFilterCurrentYear: function () {
-            this.onQuickFilterTimePeriod("currentYear");
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), 0, 1);
+            const lastDay = new Date(today.getFullYear(), 11, 31);
+
+            this._applyQuickFilter(firstDay, lastDay);
+            MessageToast.show("Filter set to current year");
+            this.onLoadData();
         },
 
         onQuickFilterLastMonth: function () {
-            this.onQuickFilterTimePeriod("lastMonth");
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            this._applyQuickFilter(firstDay, lastDay);
+            MessageToast.show("Filter set to last month");
+            this.onLoadData();
         },
 
-        /**
-         * Clears all filters and loaded data
-         */
+        _applyQuickFilter: function (fromDate, toDate) {
+            const filterModel = this.getView().getModel("filterData");
+            filterModel.setProperty("/fromDate", fromDate);
+            filterModel.setProperty("/toDate", toDate);
+            filterModel.setProperty("/billingDocument", "");
+            filterModel.setProperty("/salesOrder", "");
+            filterModel.setProperty("/billingDocumentType", "");
+        },
+
         onClearFilters: function () {
-            this.getView().getModel("filterData").setData({
-                billingDocument: "",
-                salesOrder: "",
-                billingDocumentType: "",
-                fromDate: null,
-                toDate: null,
-                pagingTop: 500,
-                groupingMethod: "salesDocAndItems",
-                autoRefresh: false
+            console.log("🧹 Clearing all filters...");
+            const filterModel = this.getView().getModel("filterData");
+            filterModel.setData({
+                billingDocument: "", salesOrder: "", billingDocumentType: "",
+                fromDate: null, toDate: null, pagingTop: PAGE_SIZE,
+                groupingMethod: "salesDocAndItems", autoRefresh: false, showConditionDetails: true
             });
-
-            this.getView().getModel("salesData").setData({
-                results: [],
-                count: 0,
-                totalCount: 0,
-                originalRecordCount: 0,
-                totalAmount: 0,
-                recordsWithTextData: 0
-            });
-
-            MessageToast.show("Filters cleared");
+            this._resetDataModels();
+            MessageToast.show("All filters cleared");
         },
 
-        /**
-         * Handles the "Test Connection" button press
-         */
-        onTestConnection: function () {
-            console.group("🔬 Testing Sales Register Service Connection");
-            var salesModel = this.getView().getModel();
-            if (!salesModel) {
-                MessageBox.error("Sales Register Model not found");
-                console.groupEnd();
-                return;
-            }
-
-            this._setLoading(true, "Testing connections...");
-
-            // Test main sales register service
-            salesModel.read("/YY1_SALESREGISTER", {
-                urlParameters: {
-                    $select: "BillingDocument,SalesDocument,BillingDocumentDate,SalesDocumentItem",
-                    $top: 5,
-                    $orderby: "BillingDocument asc"
+        // ========================================
+        // INITIALIZATION & CONFIGURATION
+        // ========================================
+        _initializeModels: function () {
+            const modelDefinitions = {
+                salesData: {
+                    results: [], count: 0, totalCount: 0, originalRecordCount: 0,
+                    totalAmount: 0, recordsWithTextData: 0, lastLoadTime: null, rawResults: []
                 },
-                success: data => {
-                    var results = data.results || [];
-                    console.log("✅ Sales Register connection test successful. Sample data:", results);
-
-                    if (results.length > 0) {
-                        var sampleDoc = results[0];
-                        var successMessage = `Sales Register Connection successful!\n\nSample document found:\n` +
-                            `Billing Document: ${sampleDoc.BillingDocument}\n` +
-                            `Sales Document: ${sampleDoc.SalesDocument}\n` +
-                            `Document Date: ${this.formatDate(sampleDoc.BillingDocumentDate)}`;
-
-                        // Now test Sales Order API if available
-                        this._testSalesOrderAPIConnection(sampleDoc.SalesDocument, sampleDoc.SalesDocumentItem, successMessage);
-                    } else {
-                        this._setLoading(false);
-                        MessageBox.information("Sales Register connection successful but no data returned");
-                        console.groupEnd();
-                    }
+                filterData: {
+                    billingDocument: "", salesOrder: "", billingDocumentType: "",
+                    fromDate: null, toDate: null, pagingTop: PAGE_SIZE,
+                    groupingMethod: "salesDocAndItems", autoRefresh: false, showConditionDetails: true
                 },
-                error: error => {
-                    this._setLoading(false);
-                    console.error("❌ Sales Register connection test failed:", error);
-                    console.groupEnd();
-                    this._handleLoadError(error);
+                loadingState: {
+                    loading: false, currentOperation: "", progress: 0,
+                    totalSteps: 0, currentStep: 0
+                },
+                pagination: {
+                    hasMore: false, currentSkip: 0, pageSize: PAGE_SIZE,
+                    totalRecords: 0, loadedRecords: 0
+                },
+                salesText: {
+                    textData: {}, loadedSalesOrders: []
                 }
-            });
-        },
-
-        /**
-         * Tests the Sales Order API connection using a sample sales order
-         */
-        _testSalesOrderAPIConnection: function (sampleSalesOrder, sampleItem, mainMessage) {
-            console.log("🔄 Testing Sales Order API connection...");
-
-            if (!this.salesOrderTextService) {
-                this._setLoading(false);
-                MessageBox.warning(mainMessage + "\n\nSales Order Text Service not available - text fields will be empty");
-                console.groupEnd();
-                return;
-            }
-
-            // Test loading text data for the sample sales order
-            this.salesOrderTextService._loadTextDataForSingleOrder(sampleSalesOrder, sampleItem || "000010")
-                .then(textData => {
-                    this._setLoading(false);
-
-                    var hasTextData = Object.values(textData).some(value => value && value.trim());
-                    var textMessage = hasTextData ?
-                        `\n\nSales Order Text API: ✅ Working\nSample text data loaded successfully` :
-                        `\n\nSales Order Text API: ⚠️ Connected but no text data found`;
-
-                    console.log("📊 Sample text data:", textData);
-
-                    MessageBox.success(mainMessage + textMessage);
-                    console.groupEnd();
-                })
-                .catch(error => {
-                    this._setLoading(false);
-                    console.error("❌ Sales Order API test failed:", error);
-
-                    MessageBox.warning(mainMessage +
-                        `\n\nSales Order Text API: ❌ Failed\nText fields will be empty\n\nError: ${error.message || 'Connection failed'}`);
-                    console.groupEnd();
-                });
-        },
-
-        /**
-         * Handles the "Load More" button press with improved duplicate handling
-         */
-        onLoadMoreData: function () {
-            var paginationData = this.getView().getModel("pagination").getData();
-            if (!paginationData.hasMore) {
-                MessageToast.show("No more data to load");
-                return;
-            }
-
-            // Use the pagination model's currentSkip value for proper pagination
-            var nextSkip = paginationData.currentSkip;
-            
-            console.log(`🔄 Loading more data: skip=${nextSkip}, current records=${paginationData.loadedRecords}, total=${paginationData.totalRecords}`);
-
-            this._loadData(true, nextSkip);
-        },
-        /**
-         * Shows current pagination status for debugging
-         */
-        onShowPaginationStatus: function () {
-            var paginationData = this.getView().getModel("pagination").getData();
-            var salesData = this.getView().getModel("salesData").getData();
-            
-            var statusText = `PAGINATION STATUS\n\n` +
-                `📊 Current State:\n` +
-                `• Has More: ${paginationData.hasMore}\n` +
-                `• Current Skip: ${paginationData.currentSkip}\n` +
-                `• Page Size: ${paginationData.pageSize}\n` +
-                `• Total Records: ${paginationData.totalRecords}\n` +
-                `• Loaded Records: ${paginationData.loadedRecords}\n` +
-                `• Displayed Results: ${salesData.results ? salesData.results.length : 0}\n\n` +
-                
-                `🔍 Next Load Info:\n` +
-                `• Next Skip Value: ${paginationData.currentSkip}\n` +
-                `• Remaining Records: ${paginationData.totalRecords - paginationData.loadedRecords}\n` +
-                `• Can Load More: ${paginationData.hasMore ? 'Yes' : 'No'}`;
-
-            MessageBox.information(statusText, {
-                title: "Pagination Status",
-                styleClass: "sapUiSizeCompact"
-            });
-        },
-
-        /**
-         * Shows current table data state for debugging
-         */
-        onShowTableDataState: function () {
-            var salesData = this.getView().getModel("salesData").getData();
-            var paginationData = this.getView().getModel("pagination").getData();
-            
-            var statusText = `TABLE DATA STATE\n\n` +
-                `📊 Sales Data Model:\n` +
-                `• Total Results: ${salesData.results ? salesData.results.length : 0}\n` +
-                `• Original Record Count: ${salesData.originalRecordCount || 0}\n` +
-                `• Total Count: ${salesData.totalCount || 0}\n` +
-                `• Total Amount: ${this.formatNumber((salesData.totalAmount || 0).toString())}\n` +
-                `• Records with Text: ${salesData.recordsWithTextData || 0}\n\n` +
-                
-                `📊 Pagination Model:\n` +
-                `• Has More: ${paginationData.hasMore}\n` +
-                `• Current Skip: ${paginationData.currentSkip}\n` +
-                `• Loaded Records: ${paginationData.loadedRecords}\n` +
-                `• Total Records: ${paginationData.totalRecords}\n\n` +
-                
-                `🔍 Table Binding:\n` +
-                `• Table ID: salesTable\n` +
-                `• Binding Path: /results\n` +
-                `• Model: salesData`;
-
-            MessageBox.information(statusText, {
-                title: "Table Data State",
-                styleClass: "sapUiSizeCompact"
-            });
-        },
-
-        /**
-         * Handles the "Show Summary" button press with enhanced text data reporting
-         */
-        onShowSummary: function () {
-            var data = this.getView().getModel("salesData").getData();
-            if (!data.results || data.results.length === 0) {
-                MessageBox.warning("No data available for summary.");
-                return;
-            }
-
-            var documentGroups = data.results.length;
-            var originalRecords = data.originalRecordCount || 0;
-            var totalInvoiceAmount = data.results.reduce((sum, item) => sum + (item.InvoiceAmount || 0), 0);
-            var totalNetAmount = data.results.reduce((sum, item) => sum + (item.TotalNetAmount || 0), 0);
-            var totalDiscount = data.results.reduce((sum, item) => sum + (item.DRV1 || 0), 0);
-
-            var uniqueSalesDocuments = new Set(data.results.map(item => item.SalesDocument)).size;
-            var uniqueBillingDocuments = new Set(data.results.map(item => item.BillingDocument)).size;
-            var uniqueCustomers = new Set(data.results.map(item => item.CustomerNumber).filter(Boolean)).size;
-
-            // Customer Type statistics
-            var b2bCustomers = data.results.filter(item => item.CustomerType === 'B2B').length;
-            var b2cCustomers = data.results.filter(item => item.CustomerType === 'B2C').length;
-            var b2bPercentage = documentGroups > 0 ? Math.round((b2bCustomers / documentGroups) * 100) : 0;
-
-            // Enhanced text data statistics
-            var recordsWithTextData = data.recordsWithTextData || 0;
-            var textDataPercentage = documentGroups > 0 ? Math.round((recordsWithTextData / documentGroups) * 100) : 0;
-
-            // Count specific text field availability
-            var textFieldStats = {
-                ZXT1: data.results.filter(item => item.ZXT1).length, // Warehouse Code
-                ZXT3: data.results.filter(item => item.ZXT3).length, // Warehouse Location  
-                ZXT4: data.results.filter(item => item.ZXT4).length, // Contract ID/Trade ID
-                ZXT5: data.results.filter(item => item.ZXT5).length, // Service Period
-                ZXT6: data.results.filter(item => item.ZXT6).length, // Material Description
-                ZXT7: data.results.filter(item => item.ZXT7).length, // Flag/Cluster ID
-                ZXT8: data.results.filter(item => item.ZXT8).length  // Item Number
             };
 
-            var summaryText = `SALES REGISTER REPORT SUMMARY\n\n` +
-                `📊 OVERVIEW:\n` +
-                `• Document Groups: ${documentGroups}\n` +
-                `• Original Records: ${originalRecords}\n` +
-                `• Unique Sales Documents: ${uniqueSalesDocuments}\n` +
-                `• Unique Billing Documents: ${uniqueBillingDocuments}\n` +
-                `• Unique Customers: ${uniqueCustomers}\n\n` +
-
-                `👥 CUSTOMER TYPE BREAKDOWN:\n` +
-                `• B2B Customers: ${b2bCustomers} (${b2bPercentage}%)\n` +
-                `• B2C Customers: ${b2cCustomers} (${100 - b2bPercentage}%)\n\n` +
-
-                `💰 FINANCIAL TOTALS:\n` +
-                `• Total Net Amount: ${this.formatNumber(totalNetAmount.toString())}\n` +
-                `• Total Discount: ${this.formatNumber(totalDiscount.toString())}\n` +
-                `• Total Invoice Amount: ${this.formatNumber(totalInvoiceAmount.toString())}\n\n` +
-
-                `📝 TEXT DATA AVAILABILITY:\n` +
-                `• Records with Text Data: ${recordsWithTextData}/${documentGroups} (${textDataPercentage}%)\n` +
-                `• Warehouse Code (ZXT1): ${textFieldStats.ZXT1} records\n` +
-                `• Contract ID (ZXT4): ${textFieldStats.ZXT4} records\n` +
-                `• Service Period (ZXT5): ${textFieldStats.ZXT5} records\n` +
-                `• Material Desc (ZXT6): ${textFieldStats.ZXT6} records\n` +
-                `• Location (ZXT3): ${textFieldStats.ZXT3} records\n\n` +
-
-                `📈 BREAKDOWN:\n` +
-                `• Average Invoice Amount: ${this.formatNumber((totalInvoiceAmount / documentGroups).toString())}\n` +
-                `• Auto Text Load: ${recordsWithTextData > 0 ? 'Successful' : 'Failed/No Data'}\n` +
-                `• Last Load Time: ${data.lastLoadTime ? (new Date(data.lastLoadTime)).toLocaleString() : "Never"}`;
-
-            MessageBox.information(summaryText, {
-                title: "Sales Register Summary with Text Data",
-                styleClass: "sapUiSizeCompact"
+            Object.entries(modelDefinitions).forEach(([name, data]) => {
+                this.getView().setModel(new JSONModel(data), name);
             });
         },
 
-        /**
-         * Handles the "Load All" button press to load all remaining data
-         */
-        onLoadAllData: function () {
-            var paginationData = this.getView().getModel("pagination").getData();
-            if (!paginationData.hasMore) {
-                MessageToast.show("No more data to load");
-                return;
-            }
-
-            MessageBox.confirm("This will load all remaining data. Continue?", {
-                title: "Load All Data",
-                onClose: action => {
-                    if (action === MessageBox.Action.OK) {
-                        this._loadAllRemainingData();
-                    }
+        _initializeServices: function () {
+            sap.ui.require(
+                ["aryasalesregister/services/SalesOrderTextService"],
+                (SalesOrderTextService) => {
+                    this.salesOrderTextService = new SalesOrderTextService(this);
+                    console.log("✅ SalesOrderTextService initialized");
+                },
+                (error) => {
+                    console.warn("⚠️ SalesOrderTextService not available:", error);
+                    this.salesOrderTextService = null;
                 }
-            });
+            );
         },
 
-        /**
-         * Sets the pagingTop to load all remaining records and triggers a data load.
-         */
-        _loadAllRemainingData: function () {
-            var paginationData = this.getView().getModel("pagination").getData();
-            var remainingRecords = paginationData.totalRecords - paginationData.loadedRecords;
-            if (remainingRecords > 0) {
-                // Temporarily increase the page size to load all remaining records
-                var currentPageSize = this.getView().getModel("filterData").getProperty("/pagingTop");
-                this.getView().getModel("filterData").setProperty("/pagingTop", remainingRecords);
-                
-                // Load the data
-                this._loadData(true, paginationData.loadedRecords);
-                
-                // Reset the page size back to original
-                setTimeout(() => {
-                    this.getView().getModel("filterData").setProperty("/pagingTop", currentPageSize);
-                }, 1000);
-            }
-        },
-
-        /**
-         * Handles table search functionality
-         */
-        onTableSearch: function (event) {
-            var query = event.getParameter("query") || event.getParameter("newValue");
-            var table = this.byId("salesTable");
-            var binding = table.getBinding("rows");
-
-            if (binding) {
-                var filters = [];
-                if (query && query.length > 0) {
-                    var searchFields = [
-                        "BillingDocument", "SalesDocument", "CustomerDisplay", "Product",
-                        "ProductDescription", "CustomerNumber", "Plant", "ZXT1", "ZXT4", "ZXT6"
-                    ];
-                    var orFilters = searchFields.map(function (field) {
-                        return new Filter(field, FilterOperator.Contains, query);
-                    });
-                    filters.push(new Filter({
-                        filters: orFilters,
-                        and: false
-                    }));
-                }
-                binding.filter(filters);
-            }
-        },
-
-        /**
-         * Handles the "Quick Sort" button press
-         */
-        onQuickSort: function (event) {
-            var button = event.getSource();
-            var property = button.data("property");
-            var descending = button.data("descending") === "true";
-            var table = this.byId("salesTable");
-            var binding = table.getBinding("rows");
-            if (binding) {
-                var sorter = new Sorter(property, descending);
-                binding.sort(sorter);
-                var sortDirection = descending ? "descending" : "ascending";
-                MessageToast.show(`Table sorted by ${property} (${sortDirection})`);
-            }
-        },
-
-        /**
-         * Opens row details dialog
-         */
-        onViewRowDetails: function (event) {
-            console.log("🔍 View row details button clicked");
-            
-            var bindingContext = event.getSource().getBindingContext("salesData");
-            if (bindingContext) {
-                var record = bindingContext.getObject();
-                console.log("📋 Record data for details:", record);
-                this._showRowDetailsDialog(record);
-            } else {
-                console.error("❌ No binding context found for details");
-                MessageBox.error("No record data available for details");
-            }
-        },
-
-        /**
-         * Handles billing document link press
-         */
-        onBillingDocumentPress: function (event) {
-            var bindingContext = event.getSource().getBindingContext("salesData");
-            if (bindingContext) {
-                var record = bindingContext.getObject();
-                MessageToast.show(`Billing Document: ${record.BillingDocument}`);
-                // Add navigation logic here if needed
-            }
-        },
-
-        /**
-         * Handles sales document link press
-         */
-        onSalesDocumentPress: function (event) {
-            var bindingContext = event.getSource().getBindingContext("salesData");
-            if (bindingContext) {
-                var record = bindingContext.getObject();
-                MessageToast.show(`Sales Document: ${record.SalesDocument}`);
-                // Add navigation logic here if needed
-            }
-        },
-
-        // --- Column Visibility Management ---
-        /**
-         * Column Visibility Management
-         */
-        onToggleColumn: function (oEvent) {
-            // Get the column ID from the custom data
-            var sColumnId = oEvent.getSource().data("columnId");
-            var oColumn = this.byId(sColumnId);
-
-            if (oColumn) {
-                // Toggle visibility
-                var bVisible = !oColumn.getVisible();
-                oColumn.setVisible(bVisible);
-
-                // Update the icon in the menu item
-                var sIcon = bVisible ? "sap-icon://accept" : "sap-icon://decline";
-                oEvent.getSource().setIcon(sIcon);
-
-                // Save column visibility settings to user preferences
-                this._saveColumnSettings();
-            }
-        },
-
-        onSelectAllColumns: function () {
-            this._setAllColumnsVisibility(true);
-        },
-
-        onDeselectAllColumns: function () {
-            // Keep at least one column visible
-            this._setAllColumnsVisibility(false, true);
-        },
-
-        onResetDefaultColumns: function () {
-            // Define your default visible columns
-            var aDefaultVisibleColumns = [
-                "docDateCol", "billingDocCol", "salesDocCol", "customerNameCol",
-                "materialCol", "netAmountCol", "discountCol", "invoiceAmountCol", "actionsCol"
-            ];
-
-            // Set visibility based on default configuration
-            var oTable = this.byId("salesTable");
-            var aColumns = oTable.getColumns();
-
-            aColumns.forEach(function (oColumn) {
-                var sColumnId = oColumn.getId().replace(this.createId(""), "");
-                var bVisible = aDefaultVisibleColumns.indexOf(sColumnId) !== -1;
-                oColumn.setVisible(bVisible);
-
-                // Update the icon in the menu item
-                var oMenuItem = this._findMenuItemByColumnId(sColumnId);
-                if (oMenuItem) {
-                    oMenuItem.setIcon(bVisible ? "sap-icon://accept" : "sap-icon://decline");
-                }
-            }.bind(this));
-
-            // Save column visibility settings to user preferences
-            this._saveColumnSettings();
-        },
-
-        // --- Export Functionality ---
-        /**
-         * Handles the "Export to Excel" button press
-         */
-        onExportToExcel: function () {
-            var data = this.getView().getModel("salesData").getData();
-            if (!data.results || data.results.length === 0) {
-                MessageBox.warning("No data available to export. Please load data first.");
-                return;
-            }
-
-            try {
-                var columns = this._createExportColumns();
-                var fileName = `Sales_Register_Report_${(new Date).toISOString().split("T")[0]}.xlsx`;
-                var exportSettings = {
-                    workbook: {
-                        columns: columns,
-                        context: {
-                            title: "Sales Register Report - Grouped Data",
-                            sheetName: "Sales Data"
-                        }
-                    },
-                    dataSource: data.results,
-                    fileName: fileName
-                };
-                var spreadsheet = new Spreadsheet(exportSettings);
-                spreadsheet.build()
-                    .then(() => {
-                        MessageToast.show(`Exported ${data.results.length} grouped records`);
-                    })
-                    .catch(error => {
-                        MessageBox.error("Export failed: " + error.message);
-                    })
-                    .finally(() => {
-                        spreadsheet.destroy();
-                    });
-            } catch (error) {
-                MessageBox.error("Export functionality not available: " + error.message);
-            }
-        },
-
-        /**
-         * Handles the "Export Current View" button press
-         */
-        onExportCurrentView: function () {
-            var table = this.byId("salesTable");
-            var binding = table.getBinding("rows");
-
-            if (!binding) {
-                MessageBox.warning("No data available to export.");
-                return;
-            }
-
-            var contexts = binding.getContexts();
-            var data = contexts.map(context => context.getObject());
-            if (data.length === 0) {
-                MessageBox.warning("No data in current view to export.");
-                return;
-            }
-
-            try {
-                var columns = this._createExportColumns();
-                var fileName = `Sales_Register_CurrentView_${new Date().toISOString().split("T")[0]}.xlsx`;
-                var exportSettings = {
-                    workbook: {
-                        columns: columns,
-                        context: {
-                            title: "Sales Register Report - Current View",
-                            sheetName: "Current View Data"
-                        }
-                    },
-                    dataSource: data,
-                    fileName: fileName
-                };
-                var spreadsheet = new Spreadsheet(exportSettings);
-                spreadsheet.build()
-                    .then(() => {
-                        MessageToast.show(`Exported ${data.length} records from current view`);
-                    })
-                    .finally(() => {
-                        spreadsheet.destroy();
-                    });
-            } catch (error) {
-                MessageBox.error("Export failed: " + error.message);
-            }
-        },
-
-        /**
-         * Creates the column definitions for the spreadsheet export.
-         */
-        _createExportColumns: function () {
-            return [{
-                label: "Invoice Date",
-                property: "BillingDocumentDate",
-                type: "date"
-            }, {
-                label: "SAP Invoice No.",
-                property: "BillingDocument",
-                type: "string"
-            }, {
-                label: "Contract ID/Trade ID",
-                property: "ZXT4",
-                type: "string"
-            }, {
-                label: "Customer Name(sold to)",
-                property: "CustomerDisplay",
-                type: "string"
-            }, {
-                label: "Customer State",
-                property: "CustomerState",
-                type: "string"
-            }, {
-                label: "Customer GSTIN",
-                property: "CustomerGSTIN",
-                type: "string"
-            }, {
-                label: "Terms of Payment",
-                property: "CustomerPaymentTerms",
-                type: "string"
-            }, {
-                label: "Sale Order No.",
-                property: "SalesDocument",
-                type: "string"
-            }, {
-                label: "Plant",
-                property: "Plant",
-                type: "string"
-            }, {
-                label: "Invoice Type",
-                property: "BillingDocumentType",
-                type: "string"
-            }, {
-                label: "Customer Code",
-                property: "CustomerNumber",
-                type: "string"
-            }, {
-                label: "Customer Type",
-                property: "CustomerType",
-                type: "string"
-            }, {
-                label: "Material Code",
-                property: "Product",
-                type: "string"
-            }, {
-                label: "Material Description",
-                property: "BillingDocumentItemText",
-                type: "string"
-            }, {
-                label: "Taxable Amount",
-                property: "TotalNetAmount",
-                type: "number"
-            }, {
-                label: "Discount",
-                property: "DRV1",
-                type: "number"
-            }, {
-                label: "Additional Charges",
-                property: "ZDV2",
-                type: "number"
-            }, {
-                label: "IGST",
-                property: "JOIG",
-                type: "number"
-            }, {
-                label: "CGST",
-                property: "JOCG",
-                type: "number"
-            }, {
-                label: "SGST",
-                property: "JOSG",
-                type: "number"
-            }, {
-                label: "Invoice Amount",
-                property: "InvoiceAmount",
-                type: "number"
-            }, {
-                label: "Warehouse Code",
-                property: "ZXT1",
-                type: "string"
-            }, {
-                label: "Warehouse Location",
-                property: "ZXT3",
-                type: "string"
-            }, {
-                label: "E-Invoice Status",
-                property: "IN_EDocEWbillStatus",
-                type: "string"
-            }, {
-                label: "Qty.",
-                property: "BillingQuantity",
-                type: "number"
-            }, {
-                label: "Rate/MT",
-                property: "PPR0",
-                type: "number"
-            }, {
-                label: "Delay Charges",
-                property: "ZDV4",
-                type: "number"
-            }, {
-                label: "E-way Bill No.",
-                property: "IN_EDocEInvcEWbillNmbr",
-                type: "string"
-            }, {
-                label: "TCS",
-                property: "ZTCS",
-                type: "number"
-            }, {
-                label: "Currency",
-                property: "TransactionCurrency",
-                type: "string"
-            }];
-        },
-
-        // --- Helper Methods ---
-        /**
-         * Shows row details dialog
-         */
-        _showRowDetailsDialog: async function (record) {
-            try {
-                if (!this._oRowDetailsDialog) {
-                    console.log("🔄 Loading details dialog fragment...");
-                    
-                    this._oRowDetailsDialog = await Fragment.load({
-                        id: this.getView().getId(),
-                        name: "aryasalesregister.view.DetailsDialogFragment",
-                        controller: this
-                    });
-                    
-                    if (!this._oRowDetailsDialog) {
-                        throw new Error("Failed to load details dialog fragment");
-                    }
-                    
-                    this.getView().addDependent(this._oRowDetailsDialog);
-                    console.log("✅ Details dialog fragment loaded successfully");
-                }
-
-                if (!record) {
-                    MessageBox.error("No record data available for details");
-                    return;
-                }
-
-                console.log("📋 Setting details data:", record);
-                
-                // Create a stable model with frozen data to prevent binding flickering
-                var stableRecord = JSON.parse(JSON.stringify(record)); // Deep clone to prevent reference issues
-                var detailModel = new JSONModel(stableRecord);
-                
-                // Set the model before opening the dialog to ensure stable bindings
-                this._oRowDetailsDialog.setModel(detailModel, "details");
-                
-                // Create a stable filterData model for the dialog
-                var stableFilterData = {
-                    showConditionDetails: true,
-                    // Add any other needed filter properties with stable values
-                    dialogMode: true
-                };
-                var dialogFilterModel = new JSONModel(stableFilterData);
-                this._oRowDetailsDialog.setModel(dialogFilterModel, "filterData");
-                console.log("🔗 Stable FilterData model set on dialog");
-                
-                // Debug: Check what models are available on the dialog
-                console.log("🔍 Details model data:", detailModel.getData());
-                console.log("🔍 FilterData model available:", !!this._oRowDetailsDialog.getModel("filterData"));
-                
-                // Open dialog immediately after model is set to prevent flickering
-                if (this._oRowDetailsDialog && !this._oRowDetailsDialog.isOpen()) {
-                    this._oRowDetailsDialog.open();
-                    console.log("✅ Details dialog opened successfully");
+        _validateConfiguration: function () {
+            const salesModel = this.getView().getModel();
+            if (!salesModel) {
+                const component = this.getOwnerComponent();
+                const componentModel = component?.getModel();
+                if (componentModel) {
+                    this.getView().setModel(componentModel);
+                    console.log("✅ Sales Register Model set from component");
                 } else {
-                    console.log("⚠️ Dialog is already open or not available");
+                    console.error("❌ Sales Register Model not found");
+                    MessageBox.error("Sales Register service not configured. Check manifest.json.");
+                    return false;
                 }
-                
-            } catch (error) {
-                console.error("❌ Failed to show details dialog:", error);
-                MessageBox.error("Failed to open details dialog: " + error.message);
             }
+            console.log("✅ Sales Register Model validated");
+            return true;
         },
 
-        /**
-         * Closes row details dialog
-         */
-        onCloseRowDetailsDialog: function () {
-            if (this._oRowDetailsDialog && this._oRowDetailsDialog.isOpen()) {
-                this._oRowDetailsDialog.close();
-            }
-        },
-
-        /**
-         * Closes details dialog (for compatibility with fragment)
-         */
-        onCloseDetailsDialog: function () {
-            if (this._oRowDetailsDialog && this._oRowDetailsDialog.isOpen()) {
-                this._oRowDetailsDialog.close();
-            }
-        },
-
-        /**
-         * Handles the "Refresh Sales Order Text" button press in details dialog
-         */
-        onRefreshSalesOrderText: function () {
-            var detailModel = this._oRowDetailsDialog.getModel("details");
-            if (!detailModel) {
-                MessageToast.show("No record data available for refresh");
-                return;
-            }
-
-            var record = detailModel.getData();
-            if (!record.SalesDocument) {
-                MessageToast.show("No sales document available for text refresh");
-                return;
-            }
-
-            MessageToast.show("Refreshing sales order text data...");
-            
-            // Call the text service to refresh data for this specific record
-            if (this.salesOrderTextService) {
-                this.salesOrderTextService._loadTextDataForSingleOrder(record.SalesDocument, record.SalesDocumentItem || "000010")
-                    .then(textData => {
-                        // Update the record with new text data
-                        Object.assign(record, textData);
-                        
-                        // Update the model to refresh the UI
-                        detailModel.refresh(true);
-                        
-                        MessageToast.show("Sales order text data refreshed successfully");
-                    })
-                    .catch(error => {
-                        console.error("Failed to refresh text data:", error);
-                        MessageBox.error("Failed to refresh text data: " + error.message);
-                    });
-            } else {
-                MessageBox.warning("Sales Order Text Service not available");
-            }
-        },
-
-        /**
-         * Handles the "Export Single Record" button press in details dialog
-         */
-        onExportSingleRecord: function () {
-            var detailModel = this._oRowDetailsDialog.getModel("details");
-            if (!detailModel) {
-                MessageBox.warning("No record data available for export");
-                return;
-            }
-
-            var record = detailModel.getData();
-            if (!record) {
-                MessageBox.warning("No record data available for export");
-                return;
-            }
-
+        // ========================================
+        // COLUMN MANAGEMENT
+        // ========================================
+        _loadColumnSettings: function () {
             try {
-                // Create export data for this single record
-                var exportData = [record];
-                var columns = this._createExportColumns();
-                var fileName = `Sales_Record_${record.BillingDocument || 'Unknown'}_${new Date().toISOString().split("T")[0]}.xlsx`;
-                
-                var exportSettings = {
-                    workbook: {
-                        columns: columns,
-                        context: {
-                            title: `Sales Record - ${record.BillingDocument}`,
-                            sheetName: "Record Details"
-                        }
-                    },
-                    dataSource: exportData,
-                    fileName: fileName
-                };
-
-                var spreadsheet = new Spreadsheet(exportSettings);
-                spreadsheet.build()
-                    .then(() => {
-                        MessageToast.show(`Record exported successfully: ${fileName}`);
-                    })
-                    .catch(error => {
-                        MessageBox.error("Export failed: " + error.message);
-                    })
-                    .finally(() => {
-                        spreadsheet.destroy();
-                    });
+                const settings = localStorage.getItem("salesRegisterColumnSettings");
+                if (settings) {
+                    this._applyColumnLayout(JSON.parse(settings));
+                    console.log("📁 Column settings loaded");
+                    return true;
+                }
             } catch (error) {
-                MessageBox.error("Export functionality not available: " + error.message);
+                console.error("Failed to load column settings:", error);
             }
-        },
-
-        /**
-         * Helper Methods for Column Management
-         */
-        _setAllColumnsVisibility: function (bVisible, bKeepOne) {
-            var oTable = this.byId("salesTable");
-            var aColumns = oTable.getColumns();
-
-            aColumns.forEach(function (oColumn, iIndex) {
-                // If bKeepOne is true, keep the first column visible
-                var bMakeVisible = bVisible || (bKeepOne && iIndex === 0);
-                oColumn.setVisible(bMakeVisible);
-
-                // Update the icon in the menu item
-                var sColumnId = oColumn.getId().replace(this.createId(""), "");
-                var oMenuItem = this._findMenuItemByColumnId(sColumnId);
-                if (oMenuItem) {
-                    oMenuItem.setIcon(bMakeVisible ? "sap-icon://accept" : "sap-icon://decline");
-                }
-            }.bind(this));
-
-            // Save column visibility settings to user preferences
-            this._saveColumnSettings();
-        },
-
-        _findMenuItemByColumnId: function (sColumnId) {
-            var oMenu = this.byId("columnVisibilityMenu");
-            var aItems = oMenu.getItems();
-
-            for (var i = 0; i < aItems.length; i++) {
-                var oItem = aItems[i];
-                var oCustomData = oItem.getCustomData();
-
-                for (var j = 0; oCustomData && j < oCustomData.length; j++) {
-                    if (oCustomData[j].getKey() === "columnId" && oCustomData[j].getValue() === sColumnId) {
-                        return oItem;
-                    }
-                }
-            }
-
-            return null;
+            return false;
         },
 
         _saveColumnSettings: function () {
-            // Save column settings to user preferences
-            var oColumnLayout = this._getColumnLayout();
-
-            // For now, just log to console. Replace with your preferred storage method
-            console.log("Column settings saved:", oColumnLayout);
-
-            // Example with localStorage:
             try {
-                localStorage.setItem("salesRegisterColumnSettings", JSON.stringify(oColumnLayout));
-            } catch (e) {
-                console.error("Failed to save column settings:", e);
+                const layout = this._getColumnLayout();
+                localStorage.setItem("salesRegisterColumnSettings", JSON.stringify(layout));
+                console.log("💾 Column settings saved");
+            } catch (error) {
+                console.error("Failed to save column settings:", error);
             }
         },
 
         _getColumnLayout: function () {
-            var oTable = this.byId("salesTable");
-            var aColumns = oTable.getColumns();
-            var aColumnLayout = [];
-
-            aColumns.forEach(function (oColumn, iIndex) {
-                var sColumnId = oColumn.getId().replace(this.createId(""), "");
-                aColumnLayout.push({
-                    id: sColumnId,
-                    visible: oColumn.getVisible(),
-                    index: iIndex
-                });
-            }.bind(this));
-
-            return aColumnLayout;
+            return this._CONSTANTS.ALL_COLUMNS.map(columnId => {
+                const column = this.byId(columnId);
+                return {
+                    id: columnId,
+                    visible: column ? column.getVisible() : true
+                };
+            });
         },
 
-        _loadColumnSettings: function () {
-            // Load column settings from user preferences
-            try {
-                var sSettings = localStorage.getItem("salesRegisterColumnSettings");
-                if (sSettings) {
-                    var oColumnLayout = JSON.parse(sSettings);
-                    this._applyColumnLayout(oColumnLayout);
-                    return true;
+        _applyColumnLayout: function (layout) {
+            layout.forEach(({ id, visible }) => {
+                const column = this.byId(id);
+                if (column) column.setVisible(visible);
+            });
+        },
+
+        onSelectAllColumns: function () {
+            this._setAllColumnsVisibility(true);
+            this._saveColumnSettings();
+            MessageToast.show("All columns visible");
+        },
+
+        onResetDefaultColumns: function () {
+            this._CONSTANTS.ALL_COLUMNS.forEach(columnId => {
+                const column = this.byId(columnId);
+                if (column) {
+                    const visible = this._CONSTANTS.DEFAULT_COLUMNS.includes(columnId);
+                    column.setVisible(visible);
                 }
-            } catch (e) {
-                console.error("Failed to load column settings:", e);
+            });
+            this._saveColumnSettings();
+            MessageToast.show("Reset to default layout");
+        },
+
+        _setAllColumnsVisibility: function (visible) {
+            this._CONSTANTS.ALL_COLUMNS.forEach(columnId => {
+                const column = this.byId(columnId);
+                if (column) column.setVisible(visible);
+            });
+        },
+
+        // ========================================
+        // DATA LOADING & PAGINATION
+        // ========================================
+        onLoadData: function () {
+            // Reset pagination and start fresh
+            this.getView().getModel("pagination").setProperty("/currentSkip", 0);
+            this._loadData(0, true); // true = reset data
+        },
+
+        onLoadMoreData: function () {
+            const paginationModel = this.getView().getModel("pagination");
+            const { hasMore, currentSkip } = paginationModel.getData();
+
+            if (hasMore) {
+                try {
+                    this._loadData(currentSkip, false); // false = append data
+                } catch (error) {
+                    console.error("Error loading more data:", error);
+                    MessageToast.show("Error loading more data");
+                }
+            } else {
+                MessageToast.show("No more records to load.");
+            }
+        },
+
+        _loadData: function (skip, resetData = false) {
+            const salesModel = this.getView().getModel();
+            if (!salesModel) {
+                MessageBox.error("Sales Register service not available");
+                return;
             }
 
-            return false;
+            const errors = this._validateFilterData();
+            if (errors.length > 0) {
+                MessageBox.error("Validation Error:\n\n" + errors.join("\n"));
+                return;
+            }
+
+            if (resetData) {
+                this._setLoading(true, "Loading first batch of data...", 1, 4);
+                this._resetDataModels();
+            } else {
+                this._setLoading(true, `Loading next batch starting from record ${skip + 1}...`, 1, 4);
+            }
+
+            this._loadSalesDataWithFilters(skip)
+                .then(result => this._processSalesResult(result, skip, resetData))
+                .catch(error => this._handleLoadError(error))
+                .finally(() => this._setLoading(false));
         },
 
-        _applyColumnLayout: function (aColumnLayout) {
-            var oTable = this.byId("salesTable");
+        _loadSalesDataWithFilters: function (skip) {
+            return new Promise((resolve, reject) => {
+                const salesModel = this.getView().getModel();
+                const filters = this._buildFilters();
+                const urlParameters = this._buildUrlParameters(skip);
 
-            // Apply visibility settings
-            aColumnLayout.forEach(function (oColumnData) {
-                var oColumn = this.byId(oColumnData.id);
-                if (oColumn) {
-                    oColumn.setVisible(oColumnData.visible);
+                console.log(`🔗 Loading data: skip=${skip}, top=${urlParameters.$top}`);
 
-                    // Update the icon in the menu item
-                    var oMenuItem = this._findMenuItemByColumnId(oColumnData.id);
-                    if (oMenuItem) {
-                        oMenuItem.setIcon(oColumnData.visible ? "sap-icon://accept" : "sap-icon://decline");
-                    }
+                salesModel.read(this._CONSTANTS.SERVICE_URLS.SALES_REGISTER, {
+                    filters: filters,
+                    urlParameters: urlParameters,
+                    success: (data) => {
+                        const results = data.results || [];
+                        let totalCount;
+
+                        if (data.__count) {
+                            totalCount = parseInt(data.__count, 10);
+                        } else {
+                            const paginationModel = this.getView().getModel("pagination");
+                            const existingTotal = paginationModel.getProperty("/totalRecords") || 0;
+                            totalCount = existingTotal || (skip + results.length);
+                        }
+
+                        console.log(`✅ Loaded ${results.length} records (skip=${skip}), Total: ${totalCount}`);
+                        resolve({ results, totalCount });
+                    },
+                    error: (error) => reject(new Error(this._formatError("Sales Data", error)))
+                });
+            });
+        },
+
+        _processSalesResult: async function (salesResult, skip, resetData) {
+            const { results: newSalesResult, totalCount } = salesResult;
+            const salesDataModel = this.getView().getModel("salesData");
+            const paginationModel = this.getView().getModel("pagination");
+
+            // 1. Merge with previously loaded raw data
+            let existingRawData = resetData ? [] : (salesDataModel.getProperty("/rawResults") || []);
+            let rawDataToProcess = existingRawData.concat(newSalesResult);
+
+            // 2. If nothing loaded and this was a fresh load, show "no data"
+            if (rawDataToProcess.length === 0 && resetData) {
+                this._finishDataLoad([], 0, 0, []);
+                MessageBox.information("No data found for the selected date range.");
+                return;
+            }
+
+            // 3. Enrich raw data with ZXT* BEFORE grouping
+            if (this.salesOrderTextService && rawDataToProcess.length > 0) {
+                try {
+                    this._setLoading(true, "Loading contract & warehouse text data...", 2, 4);
+                    rawDataToProcess = await this.salesOrderTextService.loadAndMapSalesOrderText(rawDataToProcess);
+                    console.log("✅ ZXT* text enrichment done for", rawDataToProcess.length, "records");
+                } catch (e) {
+                    console.warn("⚠️ Text enrichment failed, continuing without ZXT*:", e);
                 }
-            }.bind(this));
+            } else {
+                console.log("ℹ️ SalesOrderTextService not available, skipping ZXT* enrichment");
+            }
+
+            // 4. Group after enrichment
+            this._setLoading(true, `Processing ${rawDataToProcess.length} records...`, 3, 4);
+            const groupedData = this._groupByDocumentAndItem(rawDataToProcess);
+
+            // 5. Finish data load & update models
+            this._finishDataLoad(groupedData, totalCount, rawDataToProcess.length, rawDataToProcess);
+
+            const recordsLoadedSoFar = rawDataToProcess.length;
+            const pageSize = paginationModel.getProperty("/pageSize") || PAGE_SIZE;
+
+            const backendTotal = totalCount || 0;
+            const effectiveTotal = backendTotal && backendTotal >= recordsLoadedSoFar
+                ? backendTotal
+                : recordsLoadedSoFar;
+
+            paginationModel.setProperty("/currentSkip", recordsLoadedSoFar);
+            paginationModel.setProperty("/loadedRecords", recordsLoadedSoFar);
+            paginationModel.setProperty("/totalRecords", effectiveTotal);
+
+            // 6. Decide if there's more data
+            let hasMore = false;
+            if (backendTotal && recordsLoadedSoFar < backendTotal) {
+                hasMore = true;
+            } else if (newSalesResult.length === pageSize) {
+                hasMore = true;
+            } else {
+                hasMore = false;
+            }
+
+            paginationModel.setProperty("/hasMore", hasMore);
+
+            // 7. User feedback
+            if (resetData) {
+                MessageToast.show(
+                    `Loaded first ${newSalesResult.length} of ${backendTotal || recordsLoadedSoFar} records`
+                );
+            } else if (hasMore) {
+                const remaining = backendTotal
+                    ? (backendTotal - recordsLoadedSoFar)
+                    : "more";
+                MessageToast.show(
+                    `Loaded ${newSalesResult.length} more records. Remaining: ${remaining}`
+                );
+            } else {
+                MessageToast.show(
+                    `✅ All ${recordsLoadedSoFar} records loaded successfully!`
+                );
+            }
+        },
+
+        // ========================================
+        // DATA GROUPING (MAPPED TO EDMX)
+        // ========================================
+        _groupByDocumentAndItem: function (salesData) {
+            console.log("📊 Grouping sales data...");
+            const grouped = {};
+
+            salesData.forEach(item => {
+                const key = this._createGroupKey(item);
+                if (!grouped[key]) {
+                    grouped[key] = this._createGroupRecord(item);
+                }
+                this._accumulateGroupAmounts(grouped[key], item);
+            });
+
+            Object.values(grouped).forEach(group => {
+                this._calculateTotals(group);
+            });
+
+            const result = Object.values(grouped);
+            this._sortGroups(result);
+            console.log(`✅ Grouped ${salesData.length} items → ${result.length} groups`);
+            return result;
+        },
+
+        _createGroupKey: function (item) {
+            return `${item.BillingDocument || 'N/A'}_${item.SalesDocument || 'N/A'}_${item.SalesDocumentItem || '000010'}`;
+        },
+
+        _createGroupRecord: function (item) {
+            return {
+                // Core fields
+                BillingDocument: item.BillingDocument,
+                PurchaseOrderByCustomer: item.PurchaseOrderByCustomer || "",
+                SalesDocument: item.SalesDocument,
+                SalesDocumentItem: item.SalesDocumentItem,
+                BillingDocumentDate: item.BillingDocumentDate,
+                InvoiceMonth: this.formatInvoiceMonth(item.BillingDocumentDate),
+                BillingDocumentType: item.BillingDocumentType,
+                BillingDocumentItemText: item.ProductName || "",
+
+                // Customer/Partner
+                CustomerNumber: item.PayerParty || "",
+                CustomerDisplay: item.CustomerFullName_1 || item.BusinessPartnerName1 || "",
+                CustomerState: item.Region || "",
+                ShipToParty: item.BillToParty || "",
+                ShipToDisplay: "",
+                CustomerGSTIN: item.BPTaxNumber || "",
+                CustomerPaymentTerms: item.CustomerPaymentTerms || "",
+                CustomerHeadOffice: item.CustomerHeadOffice || "",
+                PAN: item.PAN || "",
+                TAN: "",
+
+                // Product
+                Product: item.Product || "",
+                ProductName: item.ProductName || "",
+                Plant: item.Plant || "",
+                SAC_HSN: "",
+
+                BillingQuantity: this._parseNumber(item.BillingQuantity),
+                BillingQuantityUnit: item.BillingQuantityUnit || "",
+
+                // Financial/Tax
+                TransactionCurrency: item.TransactionCurrency || "INR",
+                DistributionChannel: item.DistributionChannel || "",
+                Division: item.Division || "",
+                TaxCode: item.TaxCode || "",
+                ProfitCenter: item.ProfitCenter || "",
+                GLAccount: item.GLAccount || "",
+
+                // Derived
+                NetDueDate: item.NetDueDate,
+                CustomerType: this._deriveCustomerType(item),
+
+                // E-Invoice / E-Way Bill
+                EInvoiceStatus: item.IN_EDocEWbillStatus || "",
+                EWayBillNo: item.IN_EDocEInvcEWbillNmbr || "",
+                EWayBillDate: item.IN_EDocEInvcEWbillValidityDate,
+
+                // Customer Groups
+                CustomerGroup1: item.AdditionalCustomerGroup1 || "",
+                CustomerGroup2: item.AdditionalCustomerGroup2 || "",
+                CustomerGroup3: item.AdditionalCustomerGroup3 || "",
+                CustomerGroup4: item.AdditionalCustomerGroup4 || "",
+                CustomerGroup5: item.AdditionalCustomerGroup5 || "",
+
+                // Condition amounts
+                PPR0: 0, DRV1: 0, ZDV2: 0, JOIG: 0, JOCG: 0, JOSG: 0, ZTCS: 0, ZDV4: 0,
+
+                // Totals
+                TotalNetAmount: this._parseNumber(item.TotalNetAmount),
+                InvoiceAmount: 0,
+
+                // ZXT fields - initialized from item
+                ZXT1: item.ZXT1 || "",
+                ZXT2: item.ZXT2 || "",
+                ZXT3: item.ZXT3 || "",
+                ZXT4: item.ZXT4 || "",
+                ZXT5: item.ZXT5 || "",
+                ZXT6: item.ZXT6 || "",
+                ZXT7: item.ZXT7 || "",
+                ZXT8: item.ZXT8 || "",
+                ZXT9: item.ZXT9 || "",
+                ZXT10: this._parseNumber(item.ZXT10),
+
+                DetailRecords: []
+            };
         },
 
         /**
-         * Checks if there are active filters
+         * ✅ FIXED: Fill all non-amount attributes from detail records
          */
-        _hasActiveFilters: function (filterData) {
-            return !!(filterData.billingDocument?.trim() ||
-                filterData.salesOrder?.trim() ||
-                filterData.billingDocumentType?.trim() ||
-                filterData.fromDate ||
-                filterData.toDate);
+        _fillMissingAttributes: function (group, item) {
+            const attributeFields = [
+                // Customer / partner attributes
+                "CustomerNumber", "CustomerDisplay", "CustomerState",
+                "ShipToParty", "ShipToDisplay", "CustomerGSTIN",
+                "CustomerPaymentTerms", "CustomerHeadOffice", "PAN", "TAN",
+                "PurchaseOrderByCustomer",
+                // Product / org structure
+                "Product", "ProductName", "Plant", "SAC_HSN",
+                "TransactionCurrency", "Division", "DistributionChannel",
+                "TaxCode", "ProfitCenter", "GLAccount", "BillingQuantityUnit",
+                "BillingDocumentItemText",
+
+                // Groups
+                "CustomerGroup1", "CustomerGroup2", "CustomerGroup3",
+                "CustomerGroup4", "CustomerGroup5",
+
+                // E-Invoice / E-Way info
+                "EInvoiceStatus", "EWayBillNo", "EWayBillDate",
+
+                // ✅ FIXED: Include ALL ZXT text fields (not ZXT10 which is numeric)
+                "ZXT1", "ZXT2", "ZXT3", "ZXT4", "ZXT5",
+                "ZXT6", "ZXT7", "ZXT8", "ZXT9"
+            ];
+
+            attributeFields.forEach(function (field) {
+                const current = group[field];
+                const candidate = item[field];
+
+                if ((current === undefined || current === null || current === "") &&
+                    candidate !== undefined && candidate !== null && candidate !== "") {
+                    group[field] = candidate;
+                }
+            });
         },
 
-        /**
-         * Validates filter data
-         */
-        _validateFilterData: function (filterData) {
-            var errors = [];
+        _accumulateGroupAmounts: function (group, item) {
+            const amount = this._parseNumber(item.ConditionAmount);
+            const condType = item.ConditionType;
+            const constants = this._CONSTANTS.CONDITION_TYPES;
 
-            if (filterData.billingDocument && !/^\d+$/.test(filterData.billingDocument)) {
+            // Pricing / amounts aggregation
+            if (condType && group.hasOwnProperty(condType)) {
+                group[condType] += amount;
+            }
+            if (condType === constants.BASE_PRICE) {
+                group.TotalNetAmount += amount;
+            }
+
+            // ✅ Fill missing attributes from each detail record
+            this._fillMissingAttributes(group, item);
+
+            // ✅ FIXED: Also accumulate ZXT10 (rate) if it's numeric
+            if (item.ZXT10 && this._parseNumber(item.ZXT10) > 0) {
+                group.ZXT10 = this._parseNumber(item.ZXT10);
+            }
+
+            // Keep complete detail history
+            group.DetailRecords.push(item);
+        },
+
+        _calculateTotals: function (group) {
+            const { DRV1, ZDV2, JOIG, JOCG, JOSG, ZTCS, ZDV4, TotalNetAmount } = group;
+            group.InvoiceAmount = TotalNetAmount - DRV1 + ZDV2 + JOIG + JOCG + JOSG + ZTCS + ZDV4;
+            group.TotalNetAmount = this._round(TotalNetAmount);
+            group.InvoiceAmount = this._round(group.InvoiceAmount);
+        },
+
+        _sortGroups: function (groups) {
+            groups.sort((a, b) => {
+                if (a.SalesDocument !== b.SalesDocument) {
+                    return a.SalesDocument.localeCompare(b.SalesDocument);
+                }
+                return a.SalesDocumentItem.localeCompare(b.SalesDocumentItem);
+            });
+        },
+
+        // ========================================
+        // FILTERS & URL PARAMETERS
+        // ========================================
+        _buildFilters: function () {
+            const filters = [];
+            const data = this.getView().getModel("filterData").getData();
+
+            if (data.billingDocument && data.billingDocument.trim()) {
+                filters.push(new Filter("BillingDocument", FilterOperator.EQ, data.billingDocument.trim()));
+            }
+            if (data.salesOrder && data.salesOrder.trim()) {
+                filters.push(new Filter("SalesDocument", FilterOperator.EQ, data.salesOrder.trim()));
+            }
+            if (data.billingDocumentType && data.billingDocumentType.trim()) {
+                filters.push(new Filter("BillingDocumentType", FilterOperator.EQ, data.billingDocumentType.trim()));
+            }
+            if (data.fromDate) {
+                filters.push(new Filter("BillingDocumentDate", FilterOperator.GE, data.fromDate));
+            }
+            if (data.toDate) {
+                filters.push(new Filter("BillingDocumentDate", FilterOperator.LE, data.toDate));
+            }
+            return filters;
+        },
+
+        _buildUrlParameters: function (skip) {
+            const params = {
+                $select: this._getSelectFields(),
+                $top: PAGE_SIZE,
+                $skip: skip,
+                $orderby: "BillingDocumentDate desc,BillingDocument asc,SalesDocumentItem asc",
+                $inlinecount: "allpages"
+            };
+            return params;
+        },
+        _getSelectFields: function () {
+            const fields = [
+                "BillingDocument", "BillingDocumentDate", "BillingDocumentType", "BillingDocumentItem",
+                "SalesDocument", "SalesDocumentItem", "Product", "ProductName",  // <-- UPDATED: ProductName
+                "BillingQuantity", "BillingQuantityUnit", "ConditionType", "ConditionAmount",
+                "TransactionCurrency", "TotalNetAmount", "ProfitCenter", "GLAccount",
+                "PayerParty", "BusinessPartnerName1", "CustomerFullName_1", "CustomerHeadOffice", // <-- UPDATED: CustomerHeadOffice
+                "BillToParty", "ShipToParty", "Region", "CustomerPaymentTerms", "BPTaxNumber", "PAN", // <-- UPDATED: ShipToParty
+                "TaxCode", "DistributionChannel", "Division", // <-- UPDATED: DistributionChannel
+                "AdditionalCustomerGroup1", "AdditionalCustomerGroup2", "AdditionalCustomerGroup3",
+                "AdditionalCustomerGroup4", "AdditionalCustomerGroup5", "Plant",
+                "NetDueDate",
+                "IN_EDocEWbillStatus", "IN_EDocEInvcEWbillNmbr", "IN_EDocEInvcEWbillValidityDate"
+            ];
+            return fields.filter(Boolean).join(",");
+        },
+        _getSelectFields: function () {
+            const fields = [
+                "BillingDocument", "PurchaseOrderByCustomer",
+                "BillingDocumentDate", "BillingDocumentType", "BillingDocumentItem",
+                "SalesDocument", "SalesDocumentItem", "Product", "ProductName",
+                "BillingQuantity", "BillingQuantityUnit", "ConditionType", "ConditionAmount",
+                "TransactionCurrency", "TotalNetAmount", "ProfitCenter", "GLAccount",
+                "PayerParty", "BusinessPartnerName1", "CustomerFullName_1", "CustomerHeadOffice",
+                "BillToParty", "ShipToParty", "Region", "CustomerPaymentTerms", "BPTaxNumber", "PAN",
+                "TaxCode", "DistributionChannel", "Division",
+                "AdditionalCustomerGroup1", "AdditionalCustomerGroup2", "AdditionalCustomerGroup3",
+                "AdditionalCustomerGroup4", "AdditionalCustomerGroup5", "Plant",
+                "NetDueDate",
+                "IN_EDocEWbillStatus", "IN_EDocEInvcEWbillNmbr", "IN_EDocEInvcEWbillValidityDate"
+            ];
+            return fields.filter(Boolean).join(",");
+        },
+
+        // ========================================
+        // EXPORT
+        // ========================================
+        onExportToExcel: function () {
+            const data = this.getView().getModel("salesData").getData();
+
+            if (!data.results || data.results.length === 0) {
+                MessageBox.warning("No data to export");
+                return;
+            }
+
+            try {
+                const columns = this._getExportColumns();
+                const fileName = `Sales_Register_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+                const spreadsheet = new Spreadsheet({
+                    workbook: { columns: columns },
+                    dataSource: data.results,
+                    fileName: fileName
+                });
+
+                spreadsheet.build()
+                    .then(() => MessageToast.show(`Exported ${data.results.length} records`))
+                    .catch(error => MessageBox.error("Export failed: " + error.message))
+                    .finally(() => spreadsheet.destroy());
+
+            } catch (error) {
+                MessageBox.error("Export not available: " + error.message);
+            }
+        },
+
+        _getExportColumns: function () {
+            return [
+                { label: "Invoice Date", property: "BillingDocumentDate", type: "date" },
+                { label: "Arya DTR Invoice No.", property: "ZXT2", type: "string" },
+                { label: "SAP Invoice No.", property: "BillingDocument", type: "string" },
+                { label: "Contract ID/Trade ID", property: "ZXT4", type: "string" },
+                { label: "Customer Name(sold to)", property: "CustomerDisplay", type: "string" },
+                { label: "Customer State", property: "CustomerState", type: "string" },
+                { label: "Customer Name(ship to)", property: "ShipToDisplay", type: "string" },
+                { label: "Customer GSTIN", property: "CustomerGSTIN", type: "string" },
+                { label: "Terms of Payment", property: "CustomerPaymentTerms", type: "string" },
+                { label: "Sale order No.", property: "SalesDocument", type: "string" },
+                { label: "Due Date", property: "NetDueDate", type: "date" },
+                { label: "Plant", property: "Plant", type: "string" },
+                { label: "Invoice Type", property: "BillingDocumentType", type: "string" },
+                { label: "Tax Code", property: "TaxCode", type: "string" },
+                { label: "Customer Code", property: "CustomerNumber", type: "string" },
+                { label: "Head Office Code", property: "CustomerHeadOffice", type: "string" },
+                { label: "Customer Group-1", property: "CustomerGroup1", type: "string" },
+                { label: "Customer Group-2", property: "CustomerGroup2", type: "string" },
+                { label: "Customer Group-3", property: "CustomerGroup3", type: "string" },
+                { label: "Customer Group-4", property: "CustomerGroup4", type: "string" },
+                { label: "Customer Group-5", property: "CustomerGroup5", type: "string" },
+                { label: "Customer Type", property: "CustomerType", type: "string" },
+                { label: "Invoice Raised for the month", property: "BillingDocumentDate", type: "date" },
+                { label: "Divison", property: "Division", type: "string" },
+                { label: "Distribution Channel", property: "DistributionChannel", type: "string" },
+                { label: "GL Code", property: "GLAccount", type: "string" },
+                { label: "SAC/HSN Code", property: "SAC_HSN", type: "string" },
+                { label: "Material Code", property: "Product", type: "string" },
+                { label: "Material Description", property: "ProductName", type: "string" },
+                { label: "PAN No.", property: "PAN", type: "string" },
+                { label: "TAN No.", property: "TAN", type: "string" },
+                { label: "Taxable Amount", property: "TotalNetAmount", type: "number" },
+                { label: "Discount", property: "DRV1", type: "number" },
+                { label: "Additional Charges", property: "ZDV2", type: "number" },
+                { label: "IGST", property: "JOIG", type: "number" },
+                { label: "CGST", property: "JOCG", type: "number" },
+                { label: "SGST", property: "JOSG", type: "number" },
+                { label: "Invoice Amount", property: "InvoiceAmount", type: "number" },
+                { label: "Profit Centre", property: "ProfitCenter", type: "string" },
+                { label: "Warehouse Code", property: "ZXT1", type: "string" },
+                { label: "Warehouse Name", property: "ZXT3", type: "string" },
+                { label: "Warehouse State", property: "ZXT5", type: "string" },
+                { label: "Warehouse Location", property: "ZXT6", type: "string" },
+                { label: "Cluster ID", property: "ZXT7", type: "string" },
+                { label: "Parent Invoice No.", property: "ZXT8", type: "string" },
+                { label: "Parent Invoice Date", property: "ZXT9", type: "date" },
+                { label: "E-invoice Status", property: "EInvoiceStatus", type: "string" },
+                { label: "Qty.", property: "BillingQuantity", type: "number" },
+                { label: "Rate/MT", property: "ZXT10", type: "number" },
+                { label: "Delay Charges", property: "ZDV4", type: "number" },
+                { label: "E-way Bill No.", property: "EWayBillNo", type: "string" },
+                { label: "E-way Bill Date", property: "EWayBillDate", type: "date" },
+                { label: "TCS", property: "ZTCS", type: "number" }
+            ];
+        },
+
+        // ========================================
+        // FORMATTERS & HELPERS
+        // ========================================
+        formatNumber: function (value) {
+            if (!value && value !== 0) return "0.00";
+            const num = parseFloat(value);
+            return isNaN(num) ? "0.00" :
+                new Intl.NumberFormat("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(num);
+        },
+
+        formatDate: function (date) {
+            if (!date) return "";
+            try {
+                let d = date;
+                if (typeof date === 'string' && date.startsWith('/Date(')) {
+                    d = new Date(parseInt(date.match(/\d+/)[0], 10));
+                } else if (!(date instanceof Date)) {
+                    d = new Date(date);
+                }
+                return d.toLocaleDateString("en-IN");
+            } catch (e) {
+                return "";
+            }
+        },
+
+        formatDocTypeState: function (docType) {
+            if (!docType) return "None";
+            const states = { F2: "Success", G2: "Warning", L2: "Error" };
+            return states[docType.toUpperCase()] || "Information";
+        },
+
+        formatEInvoiceState: function (status) {
+            if (!status) return "None";
+            const upper = status.toUpperCase();
+            if (["SUCCESS", "COMPLETED"].includes(upper)) return "Success";
+            if (["PENDING", "IN_PROGRESS"].includes(upper)) return "Warning";
+            if (["FAILED", "ERROR"].includes(upper)) return "Error";
+            return "Information";
+        },
+
+        formatAmountState: function (amount) {
+            if (!amount && amount !== 0) return "None";
+            return amount > 0 ? "Information" : "Error";
+        },
+
+        _resetDataModels: function () {
+            this.getView().getModel("salesData").setData({
+                results: [], count: 0, totalCount: 0, originalRecordCount: 0,
+                totalAmount: 0, recordsWithTextData: 0, lastLoadTime: null, rawResults: []
+            });
+
+            this.getView().getModel("pagination").setData({
+                hasMore: false, currentSkip: 0, pageSize: PAGE_SIZE,
+                totalRecords: 0, loadedRecords: 0
+            });
+        },
+
+        formatInvoiceMonth: function (date) {
+            if (!date) return "";
+            let d = date;
+
+            if (typeof date === 'string' && date.startsWith('/Date(')) {
+                d = new Date(parseInt(date.match(/\d+/)[0], 10));
+            } else if (!(d instanceof Date)) {
+                d = new Date(date);
+            }
+
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+            return `${months[d.getMonth()]} ${d.getFullYear()}`;
+        },
+
+        _finishDataLoad: function (processedData, totalCount, originalCount, rawDataToProcess) {
+            const finalData = processedData;
+            const totalAmount = finalData.reduce((sum, r) => sum + (r.InvoiceAmount || 0), 0);
+
+            const textCount = finalData.filter(r =>
+                r.ZXT1 || r.ZXT2 || r.ZXT3 || r.ZXT4 ||
+                r.ZXT5 || r.ZXT6 || r.ZXT7 || r.ZXT8
+            ).length;
+
+            this.getView().getModel("salesData").setData({
+                results: finalData,
+                count: finalData.length,
+                totalCount: totalCount,
+                originalRecordCount: originalCount,
+                totalAmount: totalAmount,
+                recordsWithTextData: textCount,
+                lastLoadTime: new Date().toLocaleTimeString(),
+                rawResults: rawDataToProcess
+            });
+
+            this._setLoading(false);
+            this._fixTableScrollBars();
+        },
+
+        _fixTableScrollBars: function () {
+            const table = this.byId("salesTable");
+            if (!table) {
+                return;
+            }
+
+            setTimeout(() => {
+                try {
+                    const tableDom = table.getDomRef();
+                    if (!tableDom) {
+                        return;
+                    }
+
+                    const headerHeight = this.byId("headerToolbar")?.getDomRef()?.offsetHeight || 0;
+                    const filterHeight = this.byId("enterpriseFilterPanel")?.getDomRef()?.offsetHeight || 0;
+                    const footerHeight = this.getView().byId("mainPage")?.getFooter()?.getDomRef()?.offsetHeight || 0;
+
+                    const estimatedOffset = headerHeight + filterHeight + footerHeight + 150;
+                    const availableHeight = window.innerHeight - estimatedOffset;
+                    const newHeight = Math.max(300, availableHeight) + "px";
+
+                    tableDom.style.height = newHeight;
+                } catch (e) {
+                    console.warn("⚠️ _fixTableScrollBars failed, ignoring:", e);
+                }
+            }, 500);
+        },
+
+        _deriveCustomerType: function (item) {
+            return (item.BPTaxNumber && item.BPTaxNumber.trim()) ?
+                this._CONSTANTS.CUSTOMER_TYPES.B2B : this._CONSTANTS.CUSTOMER_TYPES.B2C;
+        },
+
+        _parseNumber: function (value) {
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const parsed = parseFloat(value);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+        },
+
+        _round: function (value) {
+            return Math.round(value * 100) / 100;
+        },
+
+        _validateFilterData: function () {
+            const errors = [];
+            const data = this.getView().getModel("filterData").getData();
+
+            if (!data.fromDate || !data.toDate) {
+                errors.push("⚠️ Date Range is MANDATORY\n\nPlease select both From Date and To Date, or use one of the Quick Period buttons.");
+                return errors;
+            }
+
+            const fromDate = new Date(data.fromDate);
+            const toDate = new Date(data.toDate);
+
+            if (fromDate > toDate) {
+                errors.push("From Date cannot be after To Date");
+            }
+
+            if (data.billingDocument && data.billingDocument.trim() && !/^\d+$/.test(data.billingDocument.trim())) {
                 errors.push("Billing Document must be numeric");
             }
-
-            if (filterData.salesOrder && !/^\d+$/.test(filterData.salesOrder)) {
+            if (data.salesOrder && data.salesOrder.trim() && !/^\d+$/.test(data.salesOrder.trim())) {
                 errors.push("Sales Order must be numeric");
-            }
-
-            if (filterData.fromDate && filterData.toDate) {
-                if (new Date(filterData.fromDate) > new Date(filterData.toDate)) {
-                    errors.push("From Date cannot be later than To Date");
-                }
             }
 
             return errors;
         },
 
-        /**
-         * Finalizes the data load process with automatic text data integration
-         * Now ensures no duplicate groups when loading more data
-         */
-        _finishDataLoad: function (processedData, isLoadMore, totalCount) {
-            var totalAmount = 0;
-            var existingData = isLoadMore ? this.getView().getModel("salesData").getProperty("/results") : [];
-            var finalData = [];
-
-            // Create a map to track unique groups (SalesDocument + SalesDocumentItem)
-            var groupMap = {};
-
-            // First, add all existing groups to the map
-            existingData.forEach(record => {
-                var groupKey = `${record.SalesDocument || 'N/A'}_${record.SalesDocumentItem || '000010'}`;
-                groupMap[groupKey] = record;
+        _setLoading: function (loading, operation = "", step = 0, total = 0) {
+            this.getView().getModel("loadingState").setData({
+                loading: loading,
+                currentOperation: operation,
+                currentStep: step,
+                totalSteps: total,
+                progress: total > 0 ? Math.round((step / total) * 100) : 0
             });
-
-            // Then, add new groups only if they don't already exist
-            processedData.forEach(record => {
-                var groupKey = `${record.SalesDocument || 'N/A'}_${record.SalesDocumentItem || '000010'}`;
-                if (!groupMap[groupKey]) {
-                    groupMap[groupKey] = record;
-                } else {
-                    console.log(`⚠️ Skipping duplicate group: ${groupKey}`);
-                }
-            });
-
-            // Convert the map back to array
-            finalData = Object.values(groupMap);
-
-            // Sort the final data to maintain order
-            finalData.sort((a, b) => {
-                if (a.SalesDocument !== b.SalesDocument) return a.SalesDocument.localeCompare(b.SalesDocument);
-                return a.SalesDocumentItem.localeCompare(b.SalesDocumentItem);
-            });
-
-            // Calculate total amount
-            totalAmount = finalData.reduce((sum, record) => sum + (record.InvoiceAmount || 0), 0);
-
-            // Count records with text data for reporting
-            var recordsWithTextData = finalData.filter(record =>
-                record.ZXT1 || record.ZXT3 || record.ZXT4 || record.ZXT5 || record.ZXT6 || record.ZXT7 || record.ZXT8
-            ).length;
-
-            // Update sales data model
-            var salesDataModel = this.getView().getModel("salesData");
-            salesDataModel.setData({
-                results: finalData,
-                count: finalData.length,
-                totalCount: totalCount,
-                originalRecordCount: isLoadMore ?
-                    this.getView().getModel("salesData").getProperty("/originalRecordCount") + processedData.length :
-                    this.getView().getModel("salesData").getProperty("/originalRecordCount") || processedData.length,
-                totalAmount: totalAmount,
-                lastLoadTime: (new Date).toISOString(),
-                recordsWithTextData: recordsWithTextData // Track text data availability
-            });
-            
-                        // Force refresh the model to ensure table binding updates
-            salesDataModel.refresh(true);
-            
-            // Ensure table binding is properly updated
-            var salesTable = this.byId("salesTable");
-            if (salesTable) {
-                var tableBinding = salesTable.getBinding("items");
-                if (tableBinding) {
-                    tableBinding.refresh();
-                    console.log("✅ Table binding refreshed successfully");
-                } else {
-                    console.log("⚠️ No table binding found, table may not be properly configured");
-                }
-            } else {
-                console.log("⚠️ Sales table not found");
-            }
-            
-            // Calculate if there are more records to load
-            var hasMore = false;
-            if (totalCount && finalData.length < totalCount) {
-                hasMore = true;
-            }
-
-            // Update pagination model with proper skip calculation
-            var pageSize = this.getView().getModel("filterData").getProperty("/pagingTop") || 500;
-            
-            // CRITICAL FIX: For load more, we need to track the actual loaded records from backend
-            // not just the final displayed records (which might be deduplicated)
-            var actualLoadedRecords = isLoadMore ? 
-                (this.getView().getModel("pagination").getProperty("/loadedRecords") + processedData.length) : 
-                processedData.length;
-            
-            // The next skip should be based on what we've actually loaded from backend, not displayed
-            var nextSkip = actualLoadedRecords;
-            
-            this.getView().getModel("pagination").setData({
-                hasMore: hasMore,
-                currentSkip: nextSkip, // This is the skip value for next load
-                pageSize: pageSize,
-                totalRecords: totalCount || 0,
-                loadedRecords: actualLoadedRecords
-            });
-
-            this._setLoading(false);
-
-            var message = isLoadMore ?
-                `Loaded ${processedData.length} additional records, ${finalData.length - existingData.length} unique groups added` :
-                `Successfully loaded ${finalData.length} grouped sales records`;
-
-            // Add text data info to the message
-            if (recordsWithTextData > 0) {
-                message += ` (${recordsWithTextData} with text data)`;
-            }
-
-            // Add pagination info
-            if (hasMore) {
-                message += `. More data available (${totalCount - finalData.length} records remaining)`;
-            }
-
-            MessageToast.show(message);
-
-            console.log(`📊 Final data summary: ${finalData.length} total records, ${recordsWithTextData} with text data`);
-            console.log(`📊 Pagination: hasMore=${hasMore}, nextSkip=${nextSkip}, totalRecords=${totalCount}`);
-            console.log(`📊 Data breakdown: existing=${existingData.length}, new=${processedData.length}, final=${finalData.length}`);
-
-            // Log duplicates if any were found
-            if (isLoadMore && processedData.length > (finalData.length - existingData.length)) {
-                var duplicates = processedData.length - (finalData.length - existingData.length);
-                console.log(`⚠️ Skipped ${duplicates} duplicate group(s) during load more`);
-            }
-            
-            // Final verification log
-            console.log(`🔍 VERIFICATION: Table should now show ${finalData.length} records`);
-            console.log(`🔍 VERIFICATION: Next load will skip ${nextSkip} records`);
         },
 
-        /**
-         * Handles data loading errors
-         */
-        _handleLoadError: function (error) {
-            console.error("❌ Sales data load error:", error);
-            this._setLoading(false);
-            MessageBox.error(`Data loading failed: ${error.message}\n\nCheck browser console for details.`);
-        },
-
-        /**
-         * Builds error messages from error objects
-         */
-        _buildErrorMessage: function (context, error) {
-            var message = `${context} loading failed`;
-
+        _formatError: function (context, error) {
+            let msg = `${context} loading failed`;
             if (error.responseText) {
                 try {
-                    var errorObj = JSON.parse(error.responseText);
-                    if (errorObj.error && errorObj.error.message) {
-                        message += `: ${errorObj.error.message.value || errorObj.error.message}`;
+                    const obj = JSON.parse(error.responseText);
+                    if (obj.error?.message) {
+                        msg += `: ${obj.error.message.value || obj.error.message}`;
                     }
                 } catch (e) {
-                    message += `: ${error.responseText}`;
+                    msg += `: ${error.responseText}`;
                 }
             } else if (error.message) {
-                message += `: ${error.message}`;
-            } else if (error.statusText) {
-                message += `: ${error.statusText}`;
+                msg += `: ${error.message}`;
             }
-
-            return message;
+            return msg;
         },
 
-        /**
-         * Sets the loading state
-         */
-        _setLoading: function (isLoading, operation, currentStep, totalSteps) {
-            this.getView().getModel("loadingState").setData({
-                loading: isLoading,
-                currentOperation: operation || "",
-                currentStep: currentStep || 0,
-                totalSteps: totalSteps || 0,
-                progress: totalSteps > 0 ? Math.round((currentStep / totalSteps) * 100) : 0
-            });
+        _handleLoadError: function (error) {
+            console.error("❌ Load error:", error);
+            this._setLoading(false);
+            MessageBox.error(`Loading failed: ${error.message}`);
         },
 
-        /**
-         * Parses amount values
-         */
-        _parseAmount: function (amount) {
-            if (typeof amount === 'number') return amount;
-            if (typeof amount === 'string') {
-                var parsed = parseFloat(amount.replace(/[^\d.-]/g, ''));
-                return isNaN(parsed) ? 0 : parsed;
+        // ========================================
+        // EVENT HANDLERS
+        // ========================================
+        onBillingDocumentPress: function (event) {
+            const record = event.getSource().getBindingContext("salesData").getObject();
+            MessageToast.show(`Viewing details for Billing Document: ${record.BillingDocument}`);
+        },
+
+        onSalesDocumentPress: function (event) {
+            const record = event.getSource().getBindingContext("salesData").getObject();
+            MessageToast.show(`Viewing details for Sales Order: ${record.SalesDocument}`);
+        },
+
+        onViewRowDetails: function (event) {
+            const record = event.getSource().getBindingContext("salesData").getObject();
+            MessageBox.information(
+                `Billing Document: ${record.BillingDocument}\n` +
+                `Sales Order: ${record.SalesDocument}\n` +
+                `Customer: ${record.CustomerDisplay}\n` +
+                `Amount: ${this.formatNumber(record.InvoiceAmount)}`
+            );
+        },
+
+        onTableSearch: function (event) {
+            const query = event.getParameter("query") || event.getParameter("newValue");
+            const table = this.byId("salesTable");
+            const binding = table.getBinding("rows");
+
+            if (binding) {
+                if (query && query.length > 0) {
+                    const filters = [
+                        new Filter("BillingDocument", FilterOperator.Contains, query),
+                        new Filter("SalesDocument", FilterOperator.Contains, query),
+                        new Filter("CustomerDisplay", FilterOperator.Contains, query),
+                        new Filter("Product", FilterOperator.Contains, query)
+                    ];
+                    binding.filter(new Filter({ filters: filters, and: false }));
+                } else {
+                    binding.filter([]);
+                }
             }
-            return 0;
-        },
-
-        /**
-         * Parses quantity values
-         */
-        _parseQuantity: function (quantity) {
-            if (typeof quantity === 'number') return quantity;
-            if (typeof quantity === 'string') {
-                var parsed = parseFloat(quantity.replace(/[^\d.-]/g, ''));
-                return isNaN(parsed) ? 0 : parsed;
-            }
-            return 0;
-        },
-
-        // --- Formatters ---
-        /**
-         * Formats numbers with Indian locale
-         */
-        formatNumber: function (value) {
-            if (!value && value !== 0) return "0.00";
-            var parsedValue = Math.abs(parseFloat(value));
-            if (isNaN(parsedValue)) return "0.00";
-            return new Intl.NumberFormat("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(parsedValue);
-        },
-
-        /**
-         * Formats dates
-         */
-        formatDate: function (date) {
-            if (!date) return "";
-            if (typeof date === "string" && date.includes("/Date(")) {
-                var timestamp = parseInt(date.match(/\d+/)[0]);
-                return new Date(timestamp).toLocaleDateString("en-IN");
-            }
-            return new Date(date).toLocaleDateString("en-IN");
-        },
-
-        /**
-         * Formats E-Invoice status state
-         */
-        formatEInvoiceState: function (status) {
-            if (!status) return "None";
-            switch (status.toUpperCase()) {
-                case "SUCCESS":
-                case "COMPLETED":
-                    return "Success";
-                case "PENDING":
-                case "IN_PROGRESS":
-                    return "Warning";
-                case "FAILED":
-                case "ERROR":
-                    return "Error";
-                default:
-                    return "Information";
-            }
-        },
-
-        /**
-         * Formats document type state for display
-         */
-        formatDocTypeState: function (docType) {
-            if (!docType) return "None";
-            switch (docType.toUpperCase()) {
-                case "F2":
-                    return "Success"; // Invoice
-                case "G2":
-                    return "Warning"; // Credit Memo
-                case "L2":
-                    return "Error"; // Debit Memo
-                default:
-                    return "Information";
-            }
-        },
-
-        /**
-         * Formats region state for display
-         */
-        formatRegionState: function (region) {
-            if (!region) return "None";
-            // Add your region-specific logic here
-            return "Information";
-        },
-
-        /**
-         * Formats amount state for display
-         */
-        formatAmountState: function (amount) {
-            if (!amount || amount === 0) return "None";
-            if (amount > 0) return "Success";
-            if (amount < 0) return "Error";
-            return "Information";
-        },
-
-        /**
-         * Formats condition state for display
-         */
-        formatConditionState: function (amount) {
-            if (!amount || amount === 0) return "None";
-            if (amount > 0) return "Success";
-            if (amount < 0) return "Error";
-            return "Information";
         }
     });
 });

@@ -1,37 +1,155 @@
-/* Enter your custom styles here */
+/* ========================================
+   SALES REGISTER TABLE - FIXED COLUMNS & SCROLL SYNC
+   ======================================== */
 
-/* Smooth scrolling for the sales table */
-.salesTableScrollable {
-    scroll-behavior: smooth;
+/* Ensure table headers stay aligned with content during scroll */
+.sapUiTableHdr,
+.sapUiTableColHdr {
+    position: sticky;
+    z-index: 10;
+}
+
+/* Fixed columns should not scroll horizontally */
+.sapUiTableCtrlFixed {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: white;
+}
+
+/* Ensure smooth scrolling */
+.sapUiTable {
+    overflow-x: auto;
     overflow-y: auto;
 }
 
-.salesTableScrollable .sapMList {
-    scroll-behavior: smooth;
+/* Keep header and data columns synchronized */
+.sapUiTableColHdrCnt {
+    overflow: hidden;
 }
 
-/* Custom scrollbar styling for better UX */
-.salesTableScrollable::-webkit-scrollbar {
-    width: 8px;
+/* Prevent column header from moving independently */
+.sapUiTableHdr {
+    overflow: hidden;
 }
 
-.salesTableScrollable::-webkit-scrollbar-track {
-    background: #f1f1f1;
+/* Fixed column shadow for visual separation */
+.sapUiTableCtrlFixed::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2px;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+}
+
+/* Ensure scrollbar doesn't affect column width calculations */
+.sapUiTableCCnt {
+    overflow-x: auto !important;
+}
+
+/* Match header width with content width */
+.sapUiTableColHdr,
+.sapUiTableCol {
+    min-width: fit-content;
+}
+
+/* Prevent content shift when scrollbar appears */
+.sapUiTable .sapUiTableCtrlScr {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* ========================================
+   ENTERPRISE STYLING
+   ======================================== */
+
+.enterpriseSalesView {
+    height: 100%;
+    background: #f5f5f5;
+}
+
+.enterprisePage {
+    background: #ffffff;
+}
+
+.enterpriseHeader {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+}
+
+.enterpriseTitle {
+    color: white;
+    font-weight: 600;
+}
+
+.enterpriseFilterPanel {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.enterpriseFilterItem {
+    padding: 0.5rem;
+}
+
+.enterpriseInput {
+    width: 100%;
+}
+
+.enterpriseTable {
+    border: 1px solid #e0e0e0;
     border-radius: 4px;
 }
 
-.salesTableScrollable::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+.enterpriseTableHeader {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e0e0e0;
 }
 
-.salesTableScrollable::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+.enterpriseDetailsBtn {
+    min-width: 80px;
 }
 
-/* Loading indicator for scroll-based loading */
-.salesTableScrollable .sapMListLoading {
-    padding: 10px;
-    text-align: center;
-    color: #666;
+.enterpriseSearch {
+    border-radius: 20px;
+}
+
+.statusIndicator {
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .enterpriseHeader {
+        padding: 0.5rem;
+    }
+
+    .enterpriseFilterItem {
+        padding: 0.25rem;
+    }
+}
+
+/* ========================================
+   TABLE PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+/* GPU acceleration for smooth scrolling */
+.sapUiTableCCnt,
+.sapUiTableCtrlScr {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Prevent layout thrashing during scroll */
+.sapUiTableRowHdr,
+.sapUiTableCol {
+    contain: layout style paint;
+}
+
+/* Optimize rendering */
+.sapUiTable {
+    contain: layout style;
 }

@@ -4,2264 +4,1071 @@
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
     xmlns:table="sap.ui.table"
+    xmlns:f="sap.f"
+    xmlns:layout="sap.ui.layout"
     height="100%"
+    class="enterpriseSalesView"
 >
-    <Page
-        id="page"
-        title="Sales Register Analytics"
-        enableScrolling="false"
-        class="sapUiSizeCompact"
+    <f:FlexibleColumnLayout
+        id="fcLayout"
+        layout="OneColumn"
     >
-        <content>
-            <Panel
-                id="filterPanel"
-                headerText="Search &amp; Filter Options"
-                expandable="true"
-                expanded="true"
-                class="sapUiMediumMargin"
+        <f:beginColumnPages>
+            <Page
+                id="mainPage"
+                title="Enterprise Sales Register Analytics"
+                enableScrolling="false"
+                class="sapUiSizeCompact enterprisePage"
+                showNavButton="false"
+                titleAlignment="Center"
             >
-                <content>
-                    <VBox
-                        id="_IDGenVBox"
-                        class="sapUiMediumMargin"
+                <customHeader>
+                    <OverflowToolbar
+                        id="headerToolbar"
+                        class="sapUiMediumMarginBottom enterpriseHeader"
                     >
+                        <Title
+                            id="headerTitle"
+                            text="Sales Register Analytics"
+                            level="H1"
+                            class="enterpriseTitle"
+                        />
+                        <ToolbarSpacer id="headerSpacer" />
+
                         <HBox
-                            id="_IDGenHBox"
-                            wrap="Wrap"
-                            class="sapUiSmallMarginBottom"
+                            id="statusIndicators"
+                            alignItems="Center"
+                            class="sapUiSmallMarginEnd"
                         >
-                            <VBox
-                                id="_IDGenVBox1"
-                                class="sapUiMediumMarginEnd"
-                            >
-                                <Label
-                                    id="_IDGenLabel14"
-                                    text="Billing Document:"
-                                />
-                                <Input
-                                    id="billingDocInput"
-                                    value="{filterData>/billingDocument}"
-                                    placeholder="e.g., 9000000001"
-                                    maxLength="12"
-                                    width="150px"
-                                    showValueHelp="true"
-                                    valueHelpRequest="onBillingDocHelp"
-                                />
-                            </VBox>
-                            <VBox
-                                id="_IDGenVBox2"
-                                class="sapUiMediumMarginEnd"
-                            >
-                                <Label
-                                    id="_IDGenLabel19"
-                                    text="Sales Order:"
-                                />
-                                <Input
-                                    id="salesOrderInput"
-                                    value="{filterData>/salesOrder}"
-                                    placeholder="e.g., 8000000001"
-                                    maxLength="12"
-                                    width="150px"
-                                    showValueHelp="true"
-                                    valueHelpRequest="onSalesOrderHelp"
-                                />
-                            </VBox>
-                            <VBox
-                                id="_IDGenVBox3"
-                                class="sapUiMediumMarginEnd"
-                            >
-                                <Label
-                                    id="_IDGenLabel2"
-                                    text="Document Date Range:"
-                                />
-                                <DateRangeSelection
-                                    id="dateRange"
-                                    from="{filterData>/fromDate}"
-                                    to="{filterData>/toDate}"
-                                    width="250px"
-                                    placeholder="Select date range"
-                                />
-                            </VBox>
+                            <ObjectStatus
+                                id="dataStatusIndicator"
+                                text="{= ${salesData>/count} ? ${salesData>/count} + ' Records' : 'No Data'}"
+                                state="{= ${salesData>/count} > 0 ? 'Success' : 'None'}"
+                                icon="{= ${salesData>/count} > 0 ? 'sap-icon://database' : 'sap-icon://warning'}"
+                                class="sapUiTinyMarginEnd statusIndicator"
+                            />
+                            <ObjectStatus
+                                id="valueStatusIndicator"
+                                text="{path: 'salesData>/totalAmount', formatter: '.formatNumber'}"
+                                state="Success"
+                                icon="sap-icon://money-bills"
+                                class="sapUiTinyMarginEnd statusIndicator"
+                                visible="{= ${salesData>/totalAmount} > 0}"
+                            />
                         </HBox>
-                        <HBox
-                            id="_IDGenHBox1"
-                            wrap="Wrap"
-                            class="sapUiSmallMarginBottom"
+
+                        <Button
+                            id="refreshAllBtn"
+                            icon="sap-icon://refresh"
+                            tooltip="Refresh Data"
+                            type="Transparent"
+                            press="onLoadData"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <Button
+                            id="enterpriseExportBtn"
+                            icon="sap-icon://excel-attachment"
+                            text="Export"
+                            tooltip="Export to Excel"
+                            type="Accept"
+                            press="onExportToExcel"
+                            enabled="{= ${salesData>/count} > 0}"
+                            class="sapUiTinyMarginEnd"
+                        />
+                        <MenuButton
+                            icon="sap-icon://action-settings"
+                            tooltip="View Options"
+                            type="Transparent"
+                            class="sapUiTinyMarginEnd"
                         >
-                            <VBox
-                                id="_IDGenVBox4"
-                                class="sapUiMediumMarginEnd"
-                            >
-                                <Label
-                                    id="_IDGenLabel3"
-                                    text="Document Type:"
+                            <menu>
+                                <Menu>
+                                    <MenuItem
+                                        text="Show All Columns"
+                                        icon="sap-icon://show"
+                                        press="onSelectAllColumns"
+                                    />
+                                    <MenuItem
+                                        text="Reset to Default"
+                                        icon="sap-icon://reset"
+                                        press="onResetDefaultColumns"
+                                    />
+                                </Menu>
+                            </menu>
+                        </MenuButton>
+                    </OverflowToolbar>
+                </customHeader>
+
+                <content>
+                    <Panel
+                        id="enterpriseFilterPanel"
+                        headerText="Filters"
+                        expandable="true"
+                        expanded="true"
+                        class="sapUiMediumMargin enterpriseFilterPanel"
+                    >
+                        <headerToolbar>
+                            <Toolbar>
+                                <Title
+                                    text="Filters"
+                                    level="H2"
                                 />
-                                <ComboBox
-                                    id="docTypeCombo"
-                                    selectedKey="{filterData>/billingDocumentType}"
-                                    placeholder="Select Document Type"
-                                    showSecondaryValues="true"
-                                    width="200px"
-                                >
-                                    <items>
-                                        <core:ListItem
-                                            id="_IDGenListItem"
+                                <ToolbarSpacer />
+                                <Text
+                                    text="{= ${salesData>/originalRecordCount} ? ${salesData>/originalRecordCount} + ' raw records → ' + ${salesData>/count} + ' grouped records' : 'Set date range to load data'}"
+                                    class="sapUiSmallText sapThemeHighlight-asColor"
+                                />
+                            </Toolbar>
+                        </headerToolbar>
+                        <content>
+                            <layout:Grid
+                                id="filterGrid"
+                                defaultSpan="XL3 L4 M6 S12"
+                                hSpacing="0.5"
+                                vSpacing="0.5"
+                                containerQuery="true"
+                                class="sapUiSmallMargin"
+                            >
+                                <VBox class="enterpriseFilterItem">
+                                    <Label
+                                        text="Date Range"
+                                        required="true"
+                                        design="Bold"
+                                    />
+                                    <DateRangeSelection
+                                        id="dateRangeFilter"
+                                        from="{filterData>/fromDate}"
+                                        to="{filterData>/toDate}"
+                                        class="enterpriseInput"
+                                        valueState="{= ${filterData>/fromDate} &amp;&amp; ${filterData>/toDate} ? 'None' : 'Error'}"
+                                        valueStateText="Date range is mandatory"
+                                        displayFormat="medium"
+                                        placeholder="Select date range..."
+                                    />
+                                    <Text
+                                        text="⚠️ Required: Select date range or use Quick Periods"
+                                        class="sapUiSmallText"
+                                        visible="{= !${filterData>/fromDate} || !${filterData>/toDate}}"
+                                    />
+                                </VBox>
+
+                                <VBox class="enterpriseFilterItem">
+                                    <Label text="Billing Document" />
+                                    <Input
+                                        value="{filterData>/billingDocument}"
+                                        placeholder="Enter billing document..."
+                                        class="enterpriseInput"
+                                    />
+                                </VBox>
+
+                                <VBox class="enterpriseFilterItem">
+                                    <Label text="Sales Order" />
+                                    <Input
+                                        value="{filterData>/salesOrder}"
+                                        placeholder="Enter sales order..."
+                                        class="enterpriseInput"
+                                    />
+                                </VBox>
+
+                                <VBox class="enterpriseFilterItem">
+                                    <Label text="Document Type" />
+                                    <ComboBox
+                                        selectedKey="{filterData>/billingDocumentType}"
+                                        class="enterpriseInput"
+                                    >
+                                        <core:Item
                                             key=""
                                             text="All Types"
                                         />
-                                        <core:ListItem
-                                            id="_IDGenListItem1"
+                                        <core:Item
                                             key="F2"
-                                            text="Invoice"
-                                            additionalText="F2"
+                                            text="Invoice (F2)"
                                         />
-                                        <core:ListItem
-                                            id="_IDGenListItem2"
+                                        <core:Item
                                             key="G2"
-                                            text="Credit Memo"
-                                            additionalText="G2"
+                                            text="Credit Memo (G2)"
                                         />
-                                        <core:ListItem
-                                            id="_IDGenListItem3"
+                                        <core:Item
                                             key="L2"
-                                            text="Debit Memo"
-                                            additionalText="L2"
+                                            text="Debit Memo (L2)"
                                         />
-                                    </items>
-                                </ComboBox>
-                            </VBox>
-                            <VBox
-                                id="_IDGenVBox5"
-                                class="sapUiMediumMarginEnd"
-                            >
-                                <Label
-                                    id="_IDGenLabel4"
-                                    text="Quick Date Filters:"
+                                    </ComboBox>
+                                </VBox>
+
+                                <VBox class="enterpriseFilterItem">
+                                    <Label text="Quick Periods" />
+                                    <HBox wrap="Wrap">
+                                        <Button
+                                            text="Current Month"
+                                            type="Ghost"
+                                            press="onQuickFilterCurrentMonth"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom"
+                                        />
+                                        <Button
+                                            text="Current Quarter"
+                                            type="Ghost"
+                                            press="onQuickFilterCurrentQuarter"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom"
+                                        />
+                                        <Button
+                                            text="Current Year"
+                                            type="Ghost"
+                                            press="onQuickFilterCurrentYear"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom"
+                                        />
+                                        <Button
+                                            text="Last Month"
+                                            type="Ghost"
+                                            press="onQuickFilterLastMonth"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom"
+                                        />
+                                    </HBox>
+                                </VBox>
+
+                                <VBox class="enterpriseFilterItem">
+                                    <Label text="Actions" />
+                                    <HBox>
+                                        <Button
+                                            text="Load Data"
+                                            type="Emphasized"
+                                            press="onLoadData"
+                                            icon="sap-icon://database"
+                                            class="sapUiTinyMarginEnd"
+                                        />
+                                        <Button
+                                            text="Clear"
+                                            type="Transparent"
+                                            press="onClearFilters"
+                                            icon="sap-icon://clear-all"
+                                        />
+                                    </HBox>
+                                </VBox>
+                            </layout:Grid>
+                        </content>
+                    </Panel>
+
+                    <Panel
+                        id="enterpriseProgressPanel"
+                        visible="{loadingState>/loading}"
+                        class="sapUiMediumMargin enterpriseProgressPanel"
+                    >
+                        <content>
+                            <VBox class="sapUiMediumMargin">
+                                <ProgressIndicator
+                                    percentValue="{loadingState>/progress}"
+                                    displayValue="{loadingState>/currentOperation}"
+                                    state="Information"
+                                    width="100%"
+                                    class="sapUiMediumMarginBottom"
                                 />
-                                <HBox id="_IDGenHBox3">
-                                    <Button
-                                        id="_IDGenButton"
-                                        text="Current Month"
-                                        press="onQuickFilterCurrentMonth"
-                                        class="sapUiTinyMarginEnd"
-                                        type="Ghost"
-                                    />
-                                    <Button
-                                        id="_IDGenButton1"
-                                        text="Current Quarter"
-                                        press="onQuickFilterCurrentQuarter"
-                                        type="Ghost"
-                                        class="sapUiTinyMarginEnd"
-                                    />
-                                    <Button
-                                        id="_IDGenButton2"
-                                        text="Current Year"
-                                        press="onQuickFilterCurrentYear"
-                                        class="sapUiTinyMarginEnd"
-                                        type="Ghost"
-                                    />
-                                    <Button
-                                        id="_IDGenButton3"
-                                        text="Last Month"
-                                        press="onQuickFilterLastMonth"
-                                        type="Ghost"
-                                    />
-                                </HBox>
+                                <Text
+                                    text="Progress: {loadingState>/currentStep} of {loadingState>/totalSteps} steps ({loadingState>/progress}%)"
+                                    class="sapUiSmallText"
+                                />
                             </VBox>
-                        </HBox>
-                        <HBox
-                            id="actionButtonsHBox"
-                            justifyContent="End"
-                            alignItems="End"
-                            class="sapUiSmallMarginTop"
-                        >
-                            <Button
-                                id="loadDataBtn"
-                                text="Load Data"
-                                type="Emphasized"
-                                press="onLoadData"
-                                class="sapUiTinyMarginEnd"
-                                icon="sap-icon://refresh"
-                            />
-                            <Button
-                                id="clearFiltersBtn"
-                                text="Clear Filters"
-                                press="onClearFilters"
-                                class="sapUiTinyMarginEnd"
-                                icon="sap-icon://clear-all"
-                            />
-                            <Button
-                                id="showSummaryBtn"
-                                text="Show Summary"
-                                press="onShowSummary"
-                                icon="sap-icon://pie-chart"
-                                type="Ghost"
-                                class="sapUiTinyMarginEnd"
-                            />
-                            <Button
-                                id="testConnectionBtn"
-                                text="Test Connection"
-                                press="onTestConnection"
-                                icon="sap-icon://test"
-                                type="Ghost"
-                                class="sapUiTinyMarginEnd"
-                            />
-                        </HBox>
-                    </VBox>
-                </content>
-            </Panel>
-            <Toolbar id="mainToolbar">
-                <Title
-                    id="tableTitle"
-                    text="{= ${salesData>/originalRecordCount} !== ${salesData>/count} ? 
-          'Sales Register Report - Grouped by Sales Document &amp; Item (' + ${salesData>/count} + ' groups from ' + ${salesData>/originalRecordCount} + ' records)' : 
-          'Sales Register Report - ' + ${salesData>/count} + ' records'}"
-                />
-                <ToolbarSpacer id="_IDGenToolbarSpacer" />
-                <HBox
-                    id="paginationControls"
-                    visible="{= ${pagination>/totalRecords} > 0}"
-                >
-                    <Button
-                        id="loadMoreBtn"
-                        text="Load More ({= ${pagination>/totalRecords} - ${pagination>/loadedRecords}} remaining)"
-                        icon="sap-icon://add"
-                        press="onLoadMoreData"
-                        enabled="{pagination>/hasMore}"
-                        type="Ghost"
-                        class="sapUiTinyMarginEnd"
-                    />
-                    <Button
-                        id="loadAllBtn"
-                        text="Load All"
-                        icon="sap-icon://download"
-                        press="onLoadAllData"
-                        enabled="{pagination>/hasMore}"
-                        type="Ghost"
-                        class="sapUiTinyMarginEnd"
-                    />
-                </HBox>
-                <SearchField
-                    id="tableSearchField"
-                    width="200px"
-                    placeholder="Search table..."
-                    search="onTableSearch"
-                    class="sapUiTinyMarginEnd"
-                />
-                <Button
-                    id="exportAllBtn"
-                    text="Export All"
-                    icon="sap-icon://excel-attachment"
-                    press="onExportToExcel"
-                    type="Ghost"
-                    class="sapUiTinyMarginEnd"
-                />
-                <Button
-                    id="exportCurrentViewBtn"
-                    text="Export Current View"
-                    icon="sap-icon://table-view"
-                    press="onExportCurrentView"
-                    type="Ghost"
-                    class="sapUiTinyMarginEnd"
-                />
-            </Toolbar>
-            <BusyIndicator
-                id="mainBusyIndicator"
-                visible="{loadingState>/loading}"
-                class="sapUiMediumMargin"
-                text="{loadingState>/currentOperation}"
-            />
-            <Panel
-                id="progressPanel"
-                visible="{= ${loadingState>/loading} &amp;&amp; ${pagination>/totalRecords} > 0}"
-                class="sapUiMediumMargin"
-                headerText="Loading Progress"
-            >
-                <content>
+                        </content>
+                    </Panel>
+
                     <VBox
-                        id="progressVBox"
+                        class="sapUiMediumMargin"
+                        height="100%"
+                    >
+                        <OverflowToolbar class="enterpriseTableHeader">
+                            <Title />
+
+                            <ToolbarSpacer />
+
+                            <!-- ✅ LOAD NEXT BUTTON AT THE TOP -->
+                            <Button
+                                visible="{pagination>/hasMore}"
+                                text="{= 'Load Next ' + ${pagination>/pageSize} + 
+                ' Records (Total: ' + ${pagination>/totalRecords} + ')' }"
+                                icon="sap-icon://add"
+                                type="Ghost"
+                                press="onLoadMoreData"
+                                class="sapUiTinyMarginEnd"
+                            />
+
+                            <SearchField
+                                width="300px"
+                                placeholder="Search..."
+                                search="onTableSearch"
+                                class="sapUiTinyMarginEnd enterpriseSearch"
+                            />
+                        </OverflowToolbar>
+
+                        <table:Table
+                            id="salesTable"
+                            rows="{salesData>/results}"
+                            selectionMode="MultiToggle"
+                            enableColumnReordering="true"
+                            enableColumnFreeze="true"
+                            enableSelectAll="false"
+                            width="100%"
+                            rowHeight="44"
+                            columnHeaderHeight="44"
+                            class="salesTableScrollable enterpriseTable"
+                            visibleRowCountMode="Interactive"
+                            visibleRowCount="15"
+                            enableBusyIndicator="true"
+                            busyIndicatorDelay="0"
+                            threshold="50"
+                        >
+                            <table:columns>
+                                <table:Column
+                                    id="actionsCol"
+                                    width="8rem"
+                                    hAlign="Center"
+                                    resizable="false"
+                                >
+                                    <Label text="Actions" />
+                                    <table:template>
+                                        <Button
+                                            icon="sap-icon://detail-view"
+                                            text="Details"
+                                            type="Emphasized"
+                                            press="onViewRowDetails"
+                                            class="enterpriseDetailsBtn"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="aryaDTRCol"
+                                    width="12rem"
+                                    sortProperty="ZXT2"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Arya DTR Invoice No." />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>PurchaseOrderByCustomer}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="sapInvoiceCol"
+                                    width="10rem"
+                                    sortProperty="BillingDocument"
+                                >
+                                    <Label text="SAP Invoice No." />
+                                    <table:template>
+                                        <Link
+                                            text="{salesData>BillingDocument}"
+                                            press="onBillingDocumentPress"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="contractIdCol"
+                                    width="12rem"
+                                    sortProperty="ZXT4"
+                                >
+                                    <Label text="Contract ID/Trade ID" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT4}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="customerInfoCol"
+                                    width="16rem"
+                                    sortProperty="CustomerDisplay"
+                                >
+                                    <Label text="Customer Name(sold to)" />
+                                    <table:template>
+                                        <VBox>
+                                            <Text
+                                                text="{salesData>CustomerDisplay}"
+                                                class="sapUiTinyMarginBottom sapUiLargeText"
+                                            />                                        
+                                        </VBox>
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="customerStateCol"
+                                    width="8rem"
+                                    sortProperty="CustomerState"
+                                >
+                                    <Label text="Customer State" />
+                                    <table:template>
+                                        <ObjectStatus
+                                            text="{salesData>CustomerState}"
+                                            state="Information"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="shipToCol"
+                                    width="16rem"
+                                    sortProperty="ShipToParty"
+                                    visible="false"
+                                >
+                                    <Label text="Customer Name(ship to)" />
+                                    <table:template>
+                                        <VBox>
+                                            <Text
+                                                text="{salesData>ShipToDisplay}"
+                                                class="sapUiTinyMarginBottom"
+                                            />
+                                            <Text
+                                                text="{salesData>ShipToParty}"
+                                                class="sapUiSmallText"
+                                            />
+                                        </VBox>
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="customerGSTINCol"
+                                    width="12rem"
+                                    sortProperty="CustomerGSTIN"
+                                    visible="false"
+                                >
+                                    <Label text="Customer GSTIN" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGSTIN}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="paymentTermsCol"
+                                    width="10rem"
+                                    sortProperty="CustomerPaymentTerms"
+                                    visible="false"
+                                >
+                                    <Label text="Terms of Payment" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerPaymentTerms}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="salesOrderCol"
+                                    width="10rem"
+                                    sortProperty="SalesDocument"
+                                >
+                                    <Label text="Sale order No." />
+                                    <table:template>
+                                        <Link
+                                            text="{salesData>SalesDocument}"
+                                            press="onSalesDocumentPress"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="dueDateCol"
+                                    width="9rem"
+                                    sortProperty="NetDueDate"
+                                    visible="false"
+                                >
+                                    <Label text="Due Date" />
+                                    <table:template>
+                                        <Text
+                                            text="{path: 'salesData>NetDueDate', formatter: '.formatDate'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="plantCol"
+                                    width="10rem"
+                                    sortProperty="Plant"
+                                    visible="false"
+                                >
+                                    <Label text="Plant" />
+                                    <table:template>
+                                        <Text text="{salesData>Plant}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="invoiceTypeCol"
+                                    width="10rem"
+                                    sortProperty="BillingDocumentType"
+                                    visible="false"
+                                >
+                                    <Label text="Invoice Type" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>BillingDocumentType}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+                                <table:Column
+                                    id="salesDivisionCol"
+                                    width="12rem"
+                                    sortProperty="Division"
+                                    visible="false"
+                                >
+                                    <Label
+                                        text="Sales Divison/Distribution Channel"
+                                    />
+                                    <table:template>
+                                        <Text
+                                            text="{= ${salesData>Division} &amp;&amp; ${salesData>DistributionChannel}
+                    ? ${salesData>Division} + ' / ' + ${salesData>DistributionChannel}
+                    : (${salesData>Division} || ${salesData>DistributionChannel} || '') }"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="taxCodeCol"
+                                    width="8rem"
+                                    sortProperty="TaxCode"
+                                    visible="false"
+                                >
+                                    <Label text="Tax Code" />
+                                    <table:template>
+                                        <Text text="{salesData>TaxCode}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="headOfficeCol"
+                                    width="10rem"
+                                    sortProperty="CustomerHeadOffice"
+                                    visible="false"
+                                >
+                                    <Label text="Head Office Code" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerHeadOffice}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="custGroup1Col"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Customer Group 1" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGroup1}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="custGroup2Col"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Customer Group 2" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGroup2}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+                                <table:Column
+                                    id="custGroup3Col"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Customer Group 3" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGroup3}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+                                <table:Column
+                                    id="custGroup4Col"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Customer Group 4" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGroup4}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+                                <table:Column
+                                    id="custGroup5Col"
+                                    visible="true"
+                                >
+                                    <!-- Changed from false -->
+                                    <Label text="Customer Group 5" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>CustomerGroup5}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="customerTypeCol"
+                                    width="8rem"
+                                    sortProperty="CustomerType"
+                                >
+                                    <Label text="Customer Type" />
+                                    <table:template>
+                                        <Text text="{salesData>CustomerType}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="invoiceMonthCol"
+                                    width="10rem"
+                                    sortProperty="BillingDocumentDate"
+                                >
+                                    <Label
+                                        text="Invoice Raised for the Month"
+                                    />
+                                    <table:template>
+                                        <Text
+                                            text="{path: 'salesData>BillingDocumentDate', formatter: '.formatInvoiceMonth'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="materialCodeCol"
+                                    width="10rem"
+                                    sortProperty="Product"
+                                >
+                                    <Label text="Material Code" />
+                                    <table:template>
+                                        <Text text="{salesData>Product}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="materialDescCol"
+                                    width="16rem"
+                                    sortProperty="ProductName"
+                                >
+                                    <Label text="Material Description" />
+                                    <table:template>
+                                        <Text text="{salesData>ProductName}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="glCodeCol"
+                                    width="10rem"
+                                    sortProperty="GLAccount"
+                                    visible="false"
+                                >
+                                    <Label text="GL Code" />
+                                    <table:template>
+                                        <Text text="{salesData>GLAccount}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="hsnCol"
+                                    width="8rem"
+                                    sortProperty="SAC_HSN"
+                                    visible="false"
+                                >
+                                    <Label text="SAC/HSN Code" />
+                                    <table:template>
+                                        <Text text="{salesData>SAC_HSN}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="panCol"
+                                    width="10rem"
+                                    sortProperty="PAN"
+                                    visible="false"
+                                >
+                                    <Label text="PAN No." />
+                                    <table:template>
+                                        <Text text="{salesData>PAN}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="tanCol"
+                                    width="10rem"
+                                    sortProperty="TAN"
+                                    visible="false"
+                                >
+                                    <Label text="TAN No." />
+                                    <table:template>
+                                        <Text text="{salesData>TAN}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="financialsCol"
+                                    width="12rem"
+                                    sortProperty="TotalNetAmount"
+                                    hAlign="End"
+                                >
+                                    <Label text="Taxable Amount" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>TotalNetAmount', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{= ${salesData>TotalNetAmount} > 0 ? 'Information' : 'Warning'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="discountCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="DRV1"
+                                    visible="false"
+                                >
+                                    <Label text="Discount" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>DRV1', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>DRV1', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="addChargesCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="ZDV2"
+                                    visible="false"
+                                >
+                                    <Label text="Additional Charges" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>ZDV2', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>ZDV2', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="igstCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="JOIG"
+                                    visible="false"
+                                >
+                                    <Label text="IGST" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>JOIG', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>JOIG', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="cgstCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="JOCG"
+                                    visible="false"
+                                >
+                                    <Label text="CGST" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>JOCG', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>JOCG', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="sgstCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="JOSG"
+                                    visible="false"
+                                >
+                                    <Label text="SGST" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>JOSG', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>JOSG', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="invoiceAmountCol"
+                                    width="12rem"
+                                    sortProperty="InvoiceAmount"
+                                    hAlign="End"
+                                >
+                                    <Label text="Invoice Amount" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>InvoiceAmount', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="Success"
+                                            emphasized="true"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="profitCenterCol"
+                                    width="10rem"
+                                    sortProperty="ProfitCenter"
+                                    visible="false"
+                                >
+                                    <Label text="Profit Centre" />
+                                    <table:template>
+                                        <Text text="{salesData>ProfitCenter}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <!-- Warehouse Code - ZXT1 -->
+                                <table:Column
+                                    id="warehouseCodeCol"
+                                    width="10rem"
+                                    sortProperty="ZXT1"
+                                >
+                                    <Label text="Warehouse Code" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT1}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <!-- Warehouse Name - ZXT3 (separate column) -->
+                                <table:Column
+                                    id="warehouseNameCol"
+                                    width="12rem"
+                                    sortProperty="ZXT3"
+                                >
+                                    <Label text="Warehouse Name" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT3}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="servicePeriodCol"
+                                    width="18rem"
+                                    sortProperty="ZXT5"
+                                >
+                                    <Label text="Warehouse State" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT5}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="warehouseLocationCol"
+                                    width="10rem"
+                                    sortProperty="ZXT6"
+                                    visible="false"
+                                >
+                                    <Label text="Warehouse Location" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT6}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="clusterIdCol"
+                                    width="10rem"
+                                    sortProperty="ZXT7"
+                                    visible="false"
+                                >
+                                    <Label text="Cluster ID" />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT7}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="parentInvoiceCol"
+                                    width="12rem"
+                                    sortProperty="ZXT8"
+                                    visible="false"
+                                >
+                                    <Label text="Parent Invoice No." />
+                                    <table:template>
+                                        <Text text="{salesData>ZXT8}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="docStatusCol"
+                                    width="12rem"
+                                    sortProperty="BillingDocumentType"
+                                >
+                                    <Label text="E-invoice Status" />
+                                    <table:template>
+                                        <VBox>
+                                            <ObjectStatus
+                                                text="{salesData>EInvoiceStatus}"
+                                                state="{path: 'salesData>EInvoiceStatus', formatter: '.formatEInvoiceState'}"
+                                                visible="{= !!${salesData>EInvoiceStatus}}"
+                                            />
+                                        </VBox>
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="quantityCol"
+                                    width="10rem"
+                                    sortProperty="BillingQuantity"
+                                    hAlign="End"
+                                >
+                                    <Label text="Qty." />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>BillingQuantity', formatter: '.formatNumber'}"
+                                            unit="{salesData>BillingQuantityUnit}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="ratePerMTCol"
+                                    width="10rem"
+                                    hAlign="End"
+                                    visible="false"
+                                >
+                                    <Label text="Rate/MT" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>ZXT10', formatter: '.formatNumber'}"
+                                            unit="INR"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="delayChargesCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="ZDV4"
+                                    visible="false"
+                                >
+                                    <Label text="Delay Charges" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>ZDV4', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>ZDV4', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <!-- E-Way Bill Number -->
+                                <table:Column
+                                    id="ewayBillCol"
+                                    width="14rem"
+                                    sortProperty="EWayBillNo"
+                                >
+                                    <Label text="E-way Bill No." />
+                                    <table:template>
+                                        <Text text="{salesData>EWayBillNo}" />
+                                    </table:template>
+                                </table:Column>
+
+                                <!-- E-Way Bill Status -->
+                                <table:Column
+                                    id="ewayBillStatusCol"
+                                    width="10rem"
+                                    sortProperty="EInvoiceStatus"
+                                    visible="false"
+                                >
+                                    <Label text="E-way Bill Status" />
+                                    <table:template>
+                                        <Text
+                                            text="{salesData>EInvoiceStatus}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <!-- E-Way Bill Date -->
+                                <table:Column
+                                    id="ewayBillDateCol"
+                                    width="12rem"
+                                    sortProperty="EWayBillDate"
+                                    visible="false"
+                                >
+                                    <Label text="E-way Bill Valid To" />
+                                    <table:template>
+                                        <Text
+                                            text="{path: 'salesData>EWayBillDate', formatter: '.formatDate'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+
+                                <table:Column
+                                    id="tcsCol"
+                                    width="8rem"
+                                    hAlign="End"
+                                    sortProperty="ZTCS"
+                                    visible="false"
+                                >
+                                    <Label text="TCS" />
+                                    <table:template>
+                                        <ObjectNumber
+                                            number="{path: 'salesData>ZTCS', formatter: '.formatNumber'}"
+                                            unit="{salesData>TransactionCurrency}"
+                                            state="{path: 'salesData>ZTCS', formatter: '.formatAmountState'}"
+                                        />
+                                    </table:template>
+                                </table:Column>
+                            </table:columns>
+                        </table:Table>
+                    </VBox>
+
+                    <IllustratedMessage
+                        id="noDataIllustration"
+                        visible="{= !${loadingState>/loading} &amp;&amp; ${salesData>/count} === 0}"
+                        illustrationType="sapIllus-EmptyList"
+                        title="Ready to Load Sales Data"
+                        description="Select a date range and click 'Load Data'"
                         class="sapUiMediumMargin"
                     >
-                        <ProgressIndicator
-                            id="loadingProgress"
-                            percentValue="{= ${pagination>/loadedRecords} / ${pagination>/totalRecords} * 100}"
-                            displayValue="{= ${pagination>/loadedRecords} + ' / ' + ${pagination>/totalRecords} + ' records'}"
+                        <additionalContent>
+                            <Button
+                                text="Load Current Month"
+                                type="Emphasized"
+                                press="onQuickFilterCurrentMonth"
+                                icon="sap-icon://database"
+                                class="sapUiMediumMarginTop"
+                            />
+                        </additionalContent>
+                    </IllustratedMessage>
+                </content>
+
+                <footer>
+                    <OverflowToolbar>
+                        <ToolbarSpacer />
+                        <Text
+                            text="Sales Register Analytics v2.0"
+                            class="sapUiSmallText"
+                        />
+                        <ToolbarSpacer />
+                        <ObjectStatus
+                            text="{= ${salesData>/lastLoadTime} ? 'Last load: ' + ${salesData>/lastLoadTime} : 'No data loaded'}"
                             state="Information"
                         />
-                        <Text
-                            id="progressText"
-                            text="{= Math.round(${pagination>/loadedRecords} / ${pagination>/totalRecords} * 100) + '% complete'}"
-                            class="sapUiSmallMarginTop"
-                            wrapping="true"
-                        />
-                    </VBox>
-                </content>
-            </Panel>
-            <VBox
-                id="_IDGenVBox11"
-                class="sapUiMediumMargin"
-                height="100%"
-            >
-                <table:Table
-                    id="salesTable"
-                    rows="{salesData>/results}"
-                    visibleRowCount="20"
-                    fixedColumnCount="3"
-                    selectionMode="MultiToggle"
-                    enableColumnReordering="true"
-                    enableColumnFreeze="true"
-                    columnHeaderVisible="true"
-                    width="100%"
-                    visible="{= !${loadingState>/loading}}"
-                >
-                    <table:extension>
-                        <Toolbar id="_IDGenToolbar">
-                            <Title
-                                id="_IDGenTitle"
-                                text="Grouped Sales Data (Summed by Sales Document &amp; Item)"
-                            />
-                            <ToolbarSpacer id="_IDGenToolbarSpacer1" />
-                            <Menu id="columnVisibilityMenu">
-                                <items>
-                                    <MenuItem
-                                        id="_IDGenMenuItem"
-                                        text="Basic Info"
-                                        enabled="false"
-                                    />
-                                    <MenuItem
-                                        id="invoiceDateMenuItem"
-                                        text="─ Invoice Date"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="docDateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="aryaDtrInvoiceMenuItem"
-                                        text="─ Arya DTR Invoice No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="aryaDtrInvoiceCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem1"
-                                        text="─ SAP Invoice No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="billingDocCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="contractIdMenuItem"
-                                        text="─ Contract ID/Trade ID"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="contractIdCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem5"
-                                        text="─ Customer Name(sold to)"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerNameCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerStateMenuItem"
-                                        text="─ Customer State"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerStateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="shipToCustomerMenuItem"
-                                        text="─ Customer Name(ship to)"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="shipToCustomerCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGstinMenuItem"
-                                        text="─ Customer GSTIN"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGstinCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="paymentTermsMenuItem"
-                                        text="─ Terms of Payment"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="paymentTermsCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem2"
-                                        text="─ Sale Order No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="salesDocCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="dueDateMenuItem"
-                                        text="─ Due Date"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="dueDateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="plantMenuItem"
-                                        text="─ Plant"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="plantCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="invoiceTypeMenuItem"
-                                        text="─ Invoice Type"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="invoiceTypeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="taxCodeMenuItem"
-                                        text="─ Tax Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="taxCodeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem4"
-                                        text="─ Customer Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="headOfficeCodeMenuItem"
-                                        text="─ Head Office Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="headOfficeCodeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGroup1MenuItem"
-                                        text="─ Customer Group-1"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGroup1Col"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGroup2MenuItem"
-                                        text="─ Customer Group-2"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGroup2Col"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGroup3MenuItem"
-                                        text="─ Customer Group-3"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGroup3Col"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGroup4MenuItem"
-                                        text="─ Customer Group-4"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGroup4Col"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerGroup5MenuItem"
-                                        text="─ Customer Group-5"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerGroup5Col"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="customerTypeMenuItem"
-                                        text="─ Customer Type"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="customerTypeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="invoiceMonthMenuItem"
-                                        text="─ Invoice Raised for the month"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="invoiceMonthCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="divisionMenuItem"
-                                        text="─ Sales Division/Distribution Channel"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="divisionCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="glAccountMenuItem"
-                                        text="─ GL Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="glAccountCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="sacHsnCodeMenuItem"
-                                        text="─ SAC/HSN Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="sacHsnCodeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem6"
-                                        text="─ Material Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="materialCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="materialDescMenuItem"
-                                        text="─ Material Description"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="materialDescCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="panNoMenuItem"
-                                        text="─ PAN No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="panNoCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="tanNoMenuItem"
-                                        text="─ TAN No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="tanNoCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem7"
-                                        text="Financial Data"
-                                        enabled="false"
-                                    />
-                                    <MenuItem
-                                        id="_IDGenMenuItem8"
-                                        text="─ Taxable Amount"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="netAmountCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem9"
-                                        text="─ Discount"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="discountCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="additionalChargesMenuItem"
-                                        text="─ Additional Charges"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="additionalChargesCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem12"
-                                        text="─ IGST"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="igstCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem13"
-                                        text="─ CGST"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="cgstCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem14"
-                                        text="─ SGST"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="sgstCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem10"
-                                        text="─ Invoice Amount"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="invoiceAmountCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="profitCenterMenuItem"
-                                        text="─ Profit Centre"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="profitCenterCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="warehouseCodeMenuItem"
-                                        text="─ Warehouse Code"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="warehouseCodeCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="warehouseNameMenuItem"
-                                        text="─ Warehouse Name"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="warehouseNameCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="warehouseStateMenuItem"
-                                        text="─ Warehouse State"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="warehouseStateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="warehouseLocationMenuItem"
-                                        text="─ Warehouse Location"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="warehouseLocationCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="clusterIdMenuItem"
-                                        text="─ Cluster ID"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="clusterIdCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="parentInvoiceNoMenuItem"
-                                        text="─ Parent Invoice No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="parentInvoiceNoCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="parentInvoiceDateMenuItem"
-                                        text="─ Parent Invoice Date"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="parentInvoiceDateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem15"
-                                        text="Additional Info"
-                                        enabled="false"
-                                    />
-                                    <MenuItem
-                                        id="_IDGenMenuItem18"
-                                        text="─ E-Invoice Status"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="eInvoiceStatusCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="_IDGenMenuItem16"
-                                        text="─ Qty."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="quantityCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="rateMtMenuItem"
-                                        text="─ Rate/MT"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="rateMtCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="delayChargesMenuItem"
-                                        text="─ Delay Charges"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="delayChargesCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="eWayBillMenuItem"
-                                        text="─ E-way Bill No."
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="eWayBillCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="eWayBillDateMenuItem"
-                                        text="─ E-way Bill Date"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="eWayBillDateCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="tcsMenuItem"
-                                        text="─ TCS"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="tcsCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="billingDurationMenuItem"
-                                        text="─ Billing Duration"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="billingDurationCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                    <MenuItem
-                                        id="actionsMenuItem"
-                                        text="─ Actions"
-                                        press="onToggleColumn"
-                                        icon="sap-icon://accept"
-                                    >
-                                        <customData>
-                                            <core:CustomData
-                                                key="columnId"
-                                                value="actionsCol"
-                                            />
-                                        </customData>
-                                    </MenuItem>
-                                </items>
-                            </Menu>
-                            <MenuButton
-                                id="quickSortBtn"
-                                text="Sort"
-                                icon="sap-icon://sort"
-                                type="Ghost"
-                                class="sapUiTinyMarginEnd"
-                            >
-                                <menu>
-                                    <Menu id="quickSortMenu">
-                                        <items>
-                                            <MenuItem
-                                                id="_IDGenMenuItem19"
-                                                text="Billing Document ↑"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="BillingDocument"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="false"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem20"
-                                                text="Billing Document ↓"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="BillingDocument"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="true"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem21"
-                                                text="Sales Document ↑"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="SalesDocument"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="false"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem22"
-                                                text="Sales Document ↓"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="SalesDocument"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="true"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem23"
-                                                text="Invoice Amount ↑"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="InvoiceAmount"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="false"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem24"
-                                                text="Invoice Amount ↓"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="InvoiceAmount"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="true"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem25"
-                                                text="Document Date ↑"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="BillingDocumentDate"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="false"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                            <MenuItem
-                                                id="_IDGenMenuItem26"
-                                                text="Document Date ↓"
-                                                press="onQuickSort"
-                                            >
-                                                <customData>
-                                                    <core:CustomData
-                                                        key="property"
-                                                        value="BillingDocumentDate"
-                                                    />
-                                                    <core:CustomData
-                                                        key="descending"
-                                                        value="true"
-                                                    />
-                                                </customData>
-                                            </MenuItem>
-                                        </items>
-                                    </Menu>
-                                </menu>
-                            </MenuButton>
-                        </Toolbar>
-                    </table:extension>
-                    <table:columns>
-                        <!-- Invoice Date -->
-                        <table:Column
-                            id="docDateCol"
-                            width="10rem"
-                            sortProperty="BillingDocumentDate"
-                            filterProperty="BillingDocumentDate"
-                        >
-                            <Label
-                                id="_IDGenLabel8"
-                                text="Invoice Date"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText15"
-                                    text="{path: 'salesData>BillingDocumentDate', formatter: '.formatDate'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Arya DTR Invoice No. (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="aryaDtrInvoiceCol"
-                            width="12rem"
-                            sortProperty="AryaDTRInvoiceNo"
-                            filterProperty="AryaDTRInvoiceNo"
-                        >
-                            <Label
-                                id="aryaDtrInvoiceLabel"
-                                text="Arya DTR Invoice No."
-                            />
-                            <table:template>
-                                <Text
-                                    id="aryaDtrInvoiceText"
-                                    text="{salesData>AryaDTRInvoiceNo}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- SAP Invoice No. -->
-                        <table:Column
-                            id="billingDocCol"
-                            width="12rem"
-                            sortProperty="BillingDocument"
-                            filterProperty="BillingDocument"
-                        >
-                            <Label
-                                id="_IDGenLabel6"
-                                text="SAP Invoice No."
-                            />
-                            <table:template>
-                                <Link
-                                    id="_IDGenLink"
-                                    text="{salesData>BillingDocument}"
-                                    press="onBillingDocumentPress"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Contract ID/Trade ID -->
-                        <table:Column
-                            id="contractIdCol"
-                            width="12rem"
-                            sortProperty="ZXT4"
-                            filterProperty="ZXT4"
-                        >
-                            <Label
-                                id="_IDGenLabel27"
-                                text="Contract ID/Trade ID"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText12"
-                                    text="{salesData>ZXT4}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Name(sold to) -->
-                        <table:Column
-                            id="customerNameCol"
-                            width="15rem"
-                            sortProperty="CustomerDisplay"
-                            filterProperty="CustomerDisplay"
-                        >
-                            <Label
-                                id="_IDGenLabel10"
-                                text="Customer Name(sold to)"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText17"
-                                    text="{salesData>CustomerDisplay}"
-                                    maxLines="2"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer State -->
-                        <table:Column
-                            id="customerStateCol"
-                            width="10rem"
-                            sortProperty="CustomerState"
-                            filterProperty="CustomerState"
-                        >
-                            <Label
-                                id="_IDGenLabel22"
-                                text="Customer State"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText19"
-                                    text="{salesData>CustomerState}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Name(ship to) (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="shipToCustomerCol"
-                            width="15rem"
-                            sortProperty="ShipToCustomer"
-                            filterProperty="ShipToCustomer"
-                        >
-                            <Label
-                                id="shipToCustomerLabel"
-                                text="Customer Name(ship to)"
-                            />
-                            <table:template>
-                                <Text
-                                    id="shipToCustomerText"
-                                    text="{salesData>ShipToCustomer}"
-                                    maxLines="2"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer GSTIN -->
-                        <table:Column
-                            id="customerGstinCol"
-                            width="15rem"
-                            sortProperty="CustomerGSTIN"
-                            filterProperty="CustomerGSTIN"
-                        >
-                            <Label
-                                id="_IDGenLabel23"
-                                text="Customer GSTIN"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText20"
-                                    text="{salesData>CustomerGSTIN}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Terms of Payment -->
-                        <table:Column
-                            id="paymentTermsCol"
-                            width="10rem"
-                            sortProperty="CustomerPaymentTerms"
-                            filterProperty="CustomerPaymentTerms"
-                        >
-                            <Label
-                                id="paymentTermsLabel"
-                                text="Terms of Payment"
-                            />
-                            <table:template>
-                                <Text
-                                    id="paymentTermsText"
-                                    text="{salesData>CustomerPaymentTerms}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Sale Order No. -->
-                        <table:Column
-                            id="salesDocCol"
-                            width="12rem"
-                            sortProperty="SalesDocument"
-                            filterProperty="SalesDocument"
-                        >
-                            <Label
-                                id="_IDGenLabel7"
-                                text="Sale Order No."
-                            />
-                            <table:template>
-                                <Link
-                                    id="_IDGenLink1"
-                                    text="{salesData>SalesDocument}"
-                                    press="onSalesDocumentPress"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Due Date -->
-                        <table:Column
-                            id="dueDateCol"
-                            width="10rem"
-                            sortProperty="NetDueDate"
-                            filterProperty="NetDueDate"
-                        >
-                            <Label
-                                id="dueDateLabel"
-                                text="Due Date"
-                            />
-                            <table:template>
-                                <Text
-                                    id="dueDateText"
-                                    text="{path: 'salesData>NetDueDate', formatter: '.formatDate'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Plant -->
-                        <table:Column
-                            id="plantCol"
-                            width="10rem"
-                            sortProperty="Plant"
-                            filterProperty="Plant"
-                        >
-                            <Label
-                                id="plantLabel"
-                                text="Plant"
-                            />
-                            <table:template>
-                                <Text
-                                    id="plantText"
-                                    text="{salesData>Plant}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Invoice Type -->
-                        <table:Column
-                            id="invoiceTypeCol"
-                            width="10rem"
-                            sortProperty="BillingDocumentType"
-                            filterProperty="BillingDocumentType"
-                        >
-                            <Label
-                                id="_IDGenLabel24"
-                                text="Invoice Type"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText9"
-                                    text="{salesData>BillingDocumentType}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Tax Code -->
-                        <table:Column
-                            id="taxCodeCol"
-                            width="8rem"
-                            sortProperty="TaxCode"
-                            filterProperty="TaxCode"
-                        >
-                            <Label
-                                id="taxCodeLabel1"
-                                text="Tax Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="taxCodeText"
-                                    text="{salesData>TaxCode}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Code -->
-                        <table:Column
-                            id="customerCol"
-                            width="10rem"
-                            sortProperty="CustomerNumber"
-                            filterProperty="CustomerNumber"
-                        >
-                            <Label
-                                id="_IDGenLabel9"
-                                text="Customer Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText16"
-                                    text="{salesData>CustomerNumber}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Head Office Code -->
-                        <table:Column
-                            id="headOfficeCodeCol"
-                            width="12rem"
-                            sortProperty="PayerParty_1"
-                            filterProperty="PayerParty_1"
-                        >
-                            <Label
-                                id="headOfficeCodeLabel"
-                                text="Head Office Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="headOfficeCodeText"
-                                    text="{salesData>PayerParty_1}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Group-1 -->
-                        <table:Column
-                            id="customerGroup1Col"
-                            width="12rem"
-                            sortProperty="AdditionalCustomerGroup1"
-                            filterProperty="AdditionalCustomerGroup1"
-                        >
-                            <Label
-                                id="customerGroup1Label"
-                                text="Customer Group-1"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerGroup1Text"
-                                    text="{salesData>AdditionalCustomerGroup1}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Group-2 -->
-                        <table:Column
-                            id="customerGroup2Col"
-                            width="12rem"
-                            sortProperty="AdditionalCustomerGroup2"
-                            filterProperty="AdditionalCustomerGroup2"
-                        >
-                            <Label
-                                id="customerGroup2Label"
-                                text="Customer Group-2"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerGroup2Text"
-                                    text="{salesData>AdditionalCustomerGroup2}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Group-3 -->
-                        <table:Column
-                            id="customerGroup3Col"
-                            width="12rem"
-                            sortProperty="AdditionalCustomerGroup3"
-                            filterProperty="AdditionalCustomerGroup3"
-                        >
-                            <Label
-                                id="customerGroup3Label"
-                                text="Customer Group-3"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerGroup3Text"
-                                    text="{salesData>AdditionalCustomerGroup3}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Group-4 -->
-                        <table:Column
-                            id="customerGroup4Col"
-                            width="12rem"
-                            sortProperty="AdditionalCustomerGroup4"
-                            filterProperty="AdditionalCustomerGroup4"
-                        >
-                            <Label
-                                id="customerGroup4Label"
-                                text="Customer Group-4"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerGroup4Text"
-                                    text="{salesData>AdditionalCustomerGroup4}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Group-5 -->
-                        <table:Column
-                            id="customerGroup5Col"
-                            width="12rem"
-                            sortProperty="AdditionalCustomerGroup5"
-                            filterProperty="AdditionalCustomerGroup5"
-                        >
-                            <Label
-                                id="customerGroup5Label"
-                                text="Customer Group-5"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerGroup5Text"
-                                    text="{salesData>AdditionalCustomerGroup5}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Customer Type (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="customerTypeCol"
-                            width="12rem"
-                            sortProperty="CustomerType"
-                            filterProperty="CustomerType"
-                        >
-                            <Label
-                                id="customerTypeLabel"
-                                text="Customer Type"
-                            />
-                            <table:template>
-                                <Text
-                                    id="customerTypeText"
-                                    text="{salesData>CustomerType}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Invoice Raised for the month (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="invoiceMonthCol"
-                            width="15rem"
-                            sortProperty="InvoiceMonth"
-                            filterProperty="InvoiceMonth"
-                        >
-                            <Label
-                                id="invoiceMonthLabel"
-                                text="Invoice Raised for the month"
-                            />
-                            <table:template>
-                                <Text
-                                    id="invoiceMonthText"
-                                    text="{salesData>InvoiceMonth}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Sales Division/Distribution Channel -->
-                        <table:Column
-                            id="divisionCol"
-                            width="12rem"
-                            sortProperty="Division"
-                            filterProperty="Division"
-                        >
-                            <Label
-                                id="divisionLabel1"
-                                text="Sales Division/Distribution Channel"
-                            />
-                            <table:template>
-                                <Text
-                                    id="divisionText"
-                                    text="{salesData>Division}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- GL Code -->
-                        <table:Column
-                            id="glAccountCol"
-                            width="10rem"
-                            sortProperty="GLAccount"
-                            filterProperty="GLAccount"
-                        >
-                            <Label
-                                id="glAccountLabel1"
-                                text="GL Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="glAccountText"
-                                    text="{salesData>GLAccount}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- SAC/HSN Code (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="sacHsnCodeCol"
-                            width="12rem"
-                            sortProperty="SacHsnCode"
-                            filterProperty="SacHsnCode"
-                        >
-                            <Label
-                                id="sacHsnCodeLabel"
-                                text="SAC/HSN Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="sacHsnCodeText"
-                                    text="{salesData>SacHsnCode}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Material Code -->
-                        <table:Column
-                            id="materialCol"
-                            width="10rem"
-                            sortProperty="Product"
-                            filterProperty="Product"
-                        >
-                            <Label
-                                id="_IDGenLabel11"
-                                text="Material Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText18"
-                                    text="{salesData>Product}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Material Description -->
-                        <table:Column
-                            id="materialDescCol"
-                            width="15rem"
-                            sortProperty="BillingDocumentItemText"
-                            filterProperty="BillingDocumentItemText"
-                        >
-                            <Label
-                                id="_IDGenLabel25"
-                                text="Material Description"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText10"
-                                    text="{salesData>BillingDocumentItemText}"
-                                    maxLines="2"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- PAN No. -->
-                        <table:Column
-                            id="panNoCol"
-                            width="12rem"
-                            sortProperty="BPIdentificationNumber"
-                            filterProperty="BPIdentificationNumber"
-                        >
-                            <Label
-                                id="panNoLabel"
-                                text="PAN No."
-                            />
-                            <table:template>
-                                <Text
-                                    id="panNoText"
-                                    text="{salesData>BPIdentificationNumber}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- TAN No. (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="tanNoCol"
-                            width="12rem"
-                            sortProperty="TANNo"
-                            filterProperty="TANNo"
-                        >
-                            <Label
-                                id="tanNoLabel"
-                                text="TAN No."
-                            />
-                            <table:template>
-                                <Text
-                                    id="tanNoText"
-                                    text="{salesData>TANNo}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Taxable Amount -->
-                        <table:Column
-                            id="netAmountCol"
-                            width="12rem"
-                            sortProperty="TotalNetAmount"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel12"
-                                text="Taxable Amount"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber"
-                                    number="{path: 'salesData>TotalNetAmount', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    emphasized="false"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Discount -->
-                        <table:Column
-                            id="discountCol"
-                            width="12rem"
-                            sortProperty="DRV1"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel13"
-                                text="Discount"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber1"
-                                    number="{path: 'salesData>DRV1', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>DRV1} > 0 ? 'Warning' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Additional Charges -->
-                        <table:Column
-                            id="additionalChargesCol"
-                            width="12rem"
-                            sortProperty="ZDV2"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel28"
-                                text="Additional Charges"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber8"
-                                    number="{path: 'salesData>ZDV2', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>ZDV2} > 0 ? 'Success' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- IGST -->
-                        <table:Column
-                            id="igstCol"
-                            width="10rem"
-                            sortProperty="JOIG"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel16"
-                                text="IGST"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber4"
-                                    number="{path: 'salesData>JOIG', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>JOIG} > 0 ? 'Success' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- CGST -->
-                        <table:Column
-                            id="cgstCol"
-                            width="10rem"
-                            sortProperty="JOCG"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel17"
-                                text="CGST"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber5"
-                                    number="{path: 'salesData>JOCG', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>JOCG} > 0 ? 'Success' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- SGST -->
-                        <table:Column
-                            id="sgstCol"
-                            width="10rem"
-                            sortProperty="JOSG"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel18"
-                                text="SGST"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber6"
-                                    number="{path: 'salesData>JOSG', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>JOSG} > 0 ? 'Success' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Invoice Amount -->
-                        <table:Column
-                            id="invoiceAmountCol"
-                            width="12rem"
-                            sortProperty="InvoiceAmount"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel15"
-                                text="Invoice Amount"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber3"
-                                    number="{path: 'salesData>InvoiceAmount', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="Success"
-                                    emphasized="true"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Profit Centre -->
-                        <table:Column
-                            id="profitCenterCol"
-                            width="10rem"
-                            sortProperty="ProfitCenter"
-                            filterProperty="ProfitCenter"
-                        >
-                            <Label
-                                id="profitCenterLabel"
-                                text="Profit Centre"
-                            />
-                            <table:template>
-                                <Text
-                                    id="profitCenterText"
-                                    text="{salesData>ProfitCenter}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Warehouse Code -->
-                        <table:Column
-                            id="warehouseCodeCol"
-                            width="10rem"
-                            sortProperty="ZXT1"
-                            filterProperty="ZXT1"
-                        >
-                            <Label
-                                id="_IDGenLabel26"
-                                text="Warehouse Code"
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText11"
-                                    text="{salesData>ZXT1}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Warehouse Name (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="warehouseNameCol"
-                            width="12rem"
-                            sortProperty="WarehouseName"
-                            filterProperty="WarehouseName"
-                        >
-                            <Label
-                                id="warehouseNameLabel"
-                                text="Warehouse Name"
-                            />
-                            <table:template>
-                                <Text
-                                    id="warehouseNameText"
-                                    text="{salesData>WarehouseName}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Warehouse State (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="warehouseStateCol"
-                            width="12rem"
-                            sortProperty="WarehouseState"
-                            filterProperty="WarehouseState"
-                        >
-                            <Label
-                                id="warehouseStateLabel"
-                                text="Warehouse State"
-                            />
-                            <table:template>
-                                <Text
-                                    id="warehouseStateText"
-                                    text="{salesData>WarehouseState}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Warehouse Location -->
-                        <table:Column
-                            id="warehouseLocationCol"
-                            width="12rem"
-                            sortProperty="ZXT3"
-                            filterProperty="ZXT3"
-                        >
-                            <Label
-                                id="warehouseLocationLabel"
-                                text="Warehouse Location"
-                            />
-                            <table:template>
-                                <Text
-                                    id="warehouseLocationText"
-                                    text="{salesData>ZXT3}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Cluster ID -->
-                        <table:Column
-                            id="clusterIdCol"
-                            width="10rem"
-                            sortProperty="ZXT8"
-                            filterProperty="ZXT8"
-                        >
-                            <Label
-                                id="clusterIdLabel"
-                                text="Cluster ID"
-                            />
-                            <table:template>
-                                <Text
-                                    id="clusterIdText"
-                                    text="{salesData>ZXT8}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Parent Invoice No. (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="parentInvoiceNoCol"
-                            width="12rem"
-                            sortProperty="ParentInvoiceNo"
-                            filterProperty="ParentInvoiceNo"
-                        >
-                            <Label
-                                id="parentInvoiceNoLabel"
-                                text="Parent Invoice No."
-                            />
-                            <table:template>
-                                <Text
-                                    id="parentInvoiceNoText"
-                                    text="{salesData>ParentInvoiceNo}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Parent Invoice Date (This appears to be a custom field not in the OData model) -->
-                        <table:Column
-                            id="parentInvoiceDateCol"
-                            width="12rem"
-                            sortProperty="ParentInvoiceDate"
-                            filterProperty="ParentInvoiceDate"
-                        >
-                            <Label
-                                id="parentInvoiceDateLabel"
-                                text="Parent Invoice Date"
-                            />
-                            <table:template>
-                                <Text
-                                    id="parentInvoiceDateText"
-                                    text="{path: 'salesData>ParentInvoiceDate', formatter: '.formatDate'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- E-invoice Status -->
-                        <table:Column
-                            id="eInvoiceStatusCol"
-                            width="12rem"
-                            sortProperty="IN_EDocEWbillStatus"
-                            filterProperty="IN_EDocEWbillStatus"
-                        >
-                            <Label
-                                id="_IDGenLabel21"
-                                text="E-Invoice Status"
-                            />
-                            <table:template>
-                                <ObjectStatus
-                                    id="_IDGenObjectStatus"
-                                    text="{salesData>IN_EDocEWbillStatus}"
-                                    state="{path: 'salesData>IN_EDocEWbillStatus', formatter: '.formatEInvoiceState'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Qty. -->
-                        <table:Column
-                            id="quantityCol"
-                            width="8rem"
-                            sortProperty="BillingQuantity"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="quantityLabel"
-                                text="Qty."
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="quantityNumber"
-                                    number="{path: 'salesData>BillingQuantity', formatter: '.formatNumber'}"
-                                    unit="{salesData>BillingQuantityUnit}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Rate/MT -->
-                        <table:Column
-                            id="rateMtCol"
-                            width="12rem"
-                            sortProperty="PPR0"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel29"
-                                text="Rate/MT"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber9"
-                                    number="{path: 'salesData>PPR0', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    emphasized="false"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Delay Charges -->
-                        <table:Column
-                            id="delayChargesCol"
-                            width="12rem"
-                            sortProperty="ZDV4"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel30"
-                                text="Delay Charges"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber10"
-                                    number="{path: 'salesData>ZDV4', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>ZDV4} > 0 ? 'Warning' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- E-way Bill No. -->
-                        <table:Column
-                            id="eWayBillCol"
-                            width="12rem"
-                            sortProperty="IN_EDocEInvcEWbillNmbr"
-                            filterProperty="IN_EDocEInvcEWbillNmbr"
-                        >
-                            <Label
-                                id="_IDGenLabel32"
-                                text="E-way Bill No."
-                            />
-                            <table:template>
-                                <Text
-                                    id="_IDGenText13"
-                                    text="{salesData>IN_EDocEInvcEWbillNmbr}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- E-way Bill Date -->
-                        <table:Column
-                            id="eWayBillDateCol"
-                            width="12rem"
-                            sortProperty="IN_EDocEInvcEWbillValidityDate"
-                            filterProperty="IN_EDocEInvcEWbillValidityDate"
-                        >
-                            <Label
-                                id="eWayBillDateLabel"
-                                text="E-way Bill Date"
-                            />
-                            <table:template>
-                                <Text
-                                    id="eWayBillDateText"
-                                    text="{path: 'salesData>IN_EDocEInvcEWbillValidityDate', formatter: '.formatDate'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- TCS -->
-                        <table:Column
-                            id="tcsCol"
-                            width="10rem"
-                            sortProperty="ZTCS"
-                            hAlign="End"
-                        >
-                            <Label
-                                id="_IDGenLabel31"
-                                text="TCS"
-                            />
-                            <table:template>
-                                <ObjectNumber
-                                    id="_IDGenObjectNumber11"
-                                    number="{path: 'salesData>ZTCS', formatter: '.formatNumber'}"
-                                    unit="{salesData>TransactionCurrency}"
-                                    state="{= ${salesData>ZTCS} > 0 ? 'Success' : 'None'}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Billing Duration -->
-                        <table:Column
-                            id="billingDurationCol"
-                            width="12rem"
-                            sortProperty="ZXT5"
-                            filterProperty="ZXT5"
-                        >
-                            <Label
-                                id="billingDurationLabel"
-                                text="Billing Duration"
-                            />
-                            <table:template>
-                                <Text
-                                    id="billingDurationText"
-                                    text="{salesData>ZXT5}"
-                                />
-                            </table:template>
-                        </table:Column>
-
-                        <!-- Actions Column (Keep at the end) -->
-                        <table:Column
-                            id="actionsCol"
-                            width="8rem"
-                            hAlign="Center"
-                        >
-                            <Label
-                                id="actionsLabel"
-                                text="Actions"
-                            />
-                            <table:template>
-                                <Button
-                                    id="viewDetailsBtn"
-                                    icon="sap-icon://detail-view"
-                                    tooltip="View all row details"
-                                    press="onViewRowDetails"
-                                    type="Ghost"
-                                    class="sapUiTinyMarginEnd"
-                                />
-                            </table:template>
-                        </table:Column>
-                    </table:columns>
-                </table:Table>
-            </VBox>
-            <MessagePage
-                id="noDataMessagePage"
-                visible="{= !${loadingState>/loading} &amp;&amp; ${salesData>/count} === 0}"
-                text="No sales data found"
-                description="No records match your current filter criteria. Please adjust your filters and try again, or use the buttons above to refresh or clear filters."
-                icon="sap-icon://document"
-                class="sapUiMediumMargin"
-            >
-                <customDescription>
-                    <Link
-                        id="clearFiltersMainLink"
-                        text="Clear All Filters and Try Again"
-                        press="onClearFilters"
-                    />
-                </customDescription>
-            </MessagePage>
-        </content>
-    </Page>
+                    </OverflowToolbar>
+                </footer>
+            </Page>
+        </f:beginColumnPages>
+    </f:FlexibleColumnLayout>
 </mvc:View>
